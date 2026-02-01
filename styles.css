@@ -70,6 +70,38 @@ body::before {
   z-index: -1;
 }
 
+.fxCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  display: block;
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.14;
+  mix-blend-mode: screen;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.00) 0px,
+    rgba(255, 255, 255, 0.00) 2px,
+    rgba(255, 42, 42, 0.06) 3px,
+    rgba(255, 255, 255, 0.00) 6px
+  );
+  animation: scan 7s linear infinite;
+}
+
+@keyframes scan {
+  from { transform: translateY(-18px); }
+  to { transform: translateY(18px); }
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -127,6 +159,12 @@ img {
   background: rgba(7, 8, 10, 0.58);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+main,
+.footer {
+  position: relative;
+  z-index: 1;
 }
 
 .nav {
@@ -746,6 +784,9 @@ img {
   .tagCard,
   .tagCard::after {
     transition: none;
+  }
+  .scanlines {
+    animation: none;
   }
 }
 
