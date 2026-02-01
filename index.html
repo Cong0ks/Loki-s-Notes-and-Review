@@ -40,6 +40,11 @@
           <a class="nav__link" href="#mvp">MVP 成果展示</a>
         </div>
 
+        <button class="nav__fxToggle" type="button" aria-pressed="true" aria-label="切换特效">
+          <span class="nav__fxDot" aria-hidden="true"></span>
+          <span class="nav__fxLabel">特效：开</span>
+        </button>
+
         <a class="nav__cta" href="https://github.com/Cong0ks/Loki-s-Notes-and-Review.git" target="_blank" rel="noopener noreferrer">
           GitHub
         </a>
@@ -75,7 +80,10 @@
           </div>
 
           <figure class="hero__visual reveal" aria-label="主视觉（占位图，可替换）">
-            <img src="./assets/images/banner.png" alt="Loki&#39;s Notes and Review 站点主视觉" width="1200" height="896" loading="eager" />
+            <img id="heroImage" src="./assets/images/banner.png" alt="Loki&#39;s Notes and Review 站点主视觉（静态）" width="1200" height="896" loading="eager" />
+            <video id="heroVideo" class="hero__video" autoplay muted loop playsinline preload="metadata" poster="./assets/images/banner.png" aria-label="Loki&#39;s Notes and Review 站点主视觉（动态）">
+              <source src="./assets/video/banner.webm" type="video/webm" />
+            </video>
             <figcaption class="sr-only">可替换主视觉占位图</figcaption>
           </figure>
         </div>

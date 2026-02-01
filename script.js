@@ -1,21 +1,32 @@
-﻿(() => {
+(() => {
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Neon particle FX (inspired by the loki.html demo). Dependency-free and runs behind content.
-  function initParticles() {
-    const canvas = document.getElementById('fx');
-    if (!canvas) return;
-    if (prefersReduced) return;
+  // FX toggle state (default ON). Persist to localStorage.
+  const FX_KEY = 'lokiFxEnabled';
+  function getFxEnabled() {
+    const raw = localStorage.getItem(FX_KEY);
+    if (raw === '0') return false;
+    if (raw === '1') return true;
+    // Default: ON. For reduced-motion users, default OFF unless they explicitly enabled it.
+    return !prefersReduced;
+  }
+  function setFxEnabled(v) {
+    localStorage.setItem(FX_KEY, v ? '1' : '0');
+  }
 
+  // Neon particle FX (inspired by loki.html demo). Runs behind content.
+  function createParticles() {
+    const canvas = document.getElementById('fx');
+    if (!canvas) return null;
     const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
+    if (!ctx) return null;
 
     let W = 0;
     let H = 0;
     let DPR = 1;
     let ps = [];
     let raf = 0;
-    let running = true;
+    let running = false;
 
     const rand = (a, b) => Math.random() * (b - a) + a;
 
@@ -82,7 +93,10 @@
       'resize',
       () => {
         window.clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(resize, 120);
+        resizeTimer = window.setTimeout(() => {
+          resize();
+          if (running && !raf) raf = window.requestAnimationFrame(frame);
+        }, 120);
       },
       { passive: true }
     );
@@ -90,8 +104,13 @@
     resize();
 
     document.addEventListener('visibilitychange', () => {
-      running = document.visibilityState === 'visible';
-      if (running && !raf) raf = window.requestAnimationFrame(frame);
+      if (!running) return;
+      if (document.visibilityState !== 'visible') {
+        if (raf) window.cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (!raf) {
+        raf = window.requestAnimationFrame(frame);
+      }
     });
 
     let last = performance.now();
@@ -106,6 +125,7 @@
       ctx.shadowBlur = cfg.glow;
       ctx.shadowColor = neon(0.9, 0.25);
 
+      // Update
       for (const p of ps) {
         p.phase += dt * p.wobble;
         const wobX = Math.sin(p.phase) * 0.38;
@@ -136,6 +156,7 @@
         if (p.y > H + 20) p.y = -20;
       }
 
+      // Links
       ctx.lineWidth = 1;
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
@@ -157,6 +178,7 @@
         }
       }
 
+      // Dots
       for (const p of ps) {
         const warm = (p.r - cfg.minR) / (cfg.maxR - cfg.minR);
 
@@ -175,6 +197,7 @@
         ctx.fill();
       }
 
+      // Soft fog
       ctx.shadowBlur = 0;
       const fog = ctx.createRadialGradient(W * 0.66, H * 0.34, 80, W * 0.66, H * 0.34, Math.max(W, H) * 0.70);
       fog.addColorStop(0, 'rgba(255,42,42,0.07)');
@@ -185,18 +208,69 @@
       raf = window.requestAnimationFrame(frame);
     }
 
-    raf = window.requestAnimationFrame(frame);
+    return {
+      start() {
+        if (running) return;
+        running = true;
+        last = performance.now();
+        if (!raf) raf = window.requestAnimationFrame(frame);
+      },
+      stop() {
+        running = false;
+        if (raf) window.cancelAnimationFrame(raf);
+        raf = 0;
+        ctx.clearRect(0, 0, W, H);
+      },
+    };
   }
+
+  const particles = createParticles();
 
   // Mobile nav
   const toggle = document.querySelector('.nav__toggle');
   const menu = document.querySelector('#navMenu');
+  const fxToggle = document.querySelector('.nav__fxToggle');
+  const fxLabel = fxToggle ? fxToggle.querySelector('.nav__fxLabel') : null;
+  const heroVideo = document.getElementById('heroVideo');
 
   function setMenu(open) {
     if (!toggle || !menu) return;
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     toggle.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
     menu.classList.toggle('is-open', open);
+  }
+
+  function applyFxState(enabled) {
+    document.body.classList.toggle('fx-off', !enabled);
+
+    if (fxToggle) {
+      fxToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    }
+    if (fxLabel) {
+      fxLabel.textContent = enabled ? '特效：开' : '特效：关';
+    }
+
+    if (enabled) {
+      particles?.start();
+      if (heroVideo) heroVideo.play().catch(() => {});
+    } else {
+      particles?.stop();
+      if (heroVideo) {
+        heroVideo.pause();
+        heroVideo.currentTime = 0;
+      }
+    }
+  }
+
+  let fxEnabled = getFxEnabled();
+  applyFxState(fxEnabled);
+
+  if (fxToggle) {
+    fxToggle.addEventListener('click', () => {
+      fxEnabled = !fxEnabled;
+      setFxEnabled(fxEnabled);
+      applyFxState(fxEnabled);
+    });
   }
 
   if (toggle && menu) {
@@ -273,6 +347,5 @@
   } else {
     document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
   }
-
-  initParticles();
 })();
+

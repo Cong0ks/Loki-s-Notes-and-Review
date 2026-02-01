@@ -171,7 +171,7 @@ main,
   width: min(1120px, calc(100% - 40px));
   margin-inline: auto;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 14px;
   padding: 14px 0;
@@ -238,6 +238,47 @@ main,
 .nav__cta:hover {
   border-color: rgba(255, 42, 42, 0.55);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36), 0 0 0 1px rgba(255, 42, 42, 0.12);
+}
+
+.nav__fxToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.90);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.7px;
+  cursor: pointer;
+}
+
+.nav__fxToggle:hover {
+  border-color: rgba(255, 42, 42, 0.45);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(255, 42, 42, 0.10);
+}
+
+.nav__fxToggle[aria-pressed="true"] {
+  border-color: rgba(255, 42, 42, 0.55);
+  background: radial-gradient(120% 120% at 20% 0%, rgba(255, 42, 42, 0.22), rgba(255, 255, 255, 0.02) 55%),
+    rgba(0, 0, 0, 0.22);
+}
+
+.nav__fxDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.10);
+}
+
+.nav__fxToggle[aria-pressed="true"] .nav__fxDot {
+  background: var(--red2);
+  box-shadow: 0 0 0 2px rgba(255, 42, 42, 0.18), 0 0 14px rgba(255, 42, 42, 0.35);
 }
 
 .nav__toggle {
@@ -373,6 +414,7 @@ main,
 
 .hero__visual {
   aspect-ratio: 4 / 3;
+  position: relative;
   margin: 0;
   border-radius: var(--radius);
   overflow: hidden;
@@ -383,9 +425,31 @@ main,
 }
 
 .hero__visual img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+body.fx-off .fxCanvas,
+body.fx-off .scanlines {
+  display: none;
+}
+
+body.fx-off .hero__video {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .section {
