@@ -1,0 +1,15 @@
+﻿# Local venv
+.venv/
+
+# Notes PDFs (do not publish)
+pdf_reference/
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Common
+node_modules/
+dist/
+out/
