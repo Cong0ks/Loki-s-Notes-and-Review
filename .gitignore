@@ -13,3 +13,5 @@ Thumbs.db
 node_modules/
 dist/
 out/
+
+# Non-website files (keep local)\nNon-WebFile/\n
