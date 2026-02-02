@@ -411,6 +411,21 @@
   }
 
   function setChatOpen(open) {
+    // GA4 tracking: when user opens the assistant.
+    // Event name requested: AI_assistant
+    if (open && !chatState.open) {
+      try {
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'AI_assistant', {
+            feature: 'chat_widget',
+            state: 'open',
+          });
+        }
+      } catch (_) {
+        // Ignore tracking failures; never block UI.
+      }
+    }
+
     chatState.open = open;
     if (chatFab) chatFab.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (chatPanel) chatPanel.classList.toggle('is-open', open);
