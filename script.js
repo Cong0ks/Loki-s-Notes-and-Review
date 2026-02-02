@@ -411,21 +411,6 @@
   }
 
   function setChatOpen(open) {
-    // GA4 tracking: when user opens the assistant.
-    // Event name requested: AI_assistant
-    if (open && !chatState.open) {
-      try {
-        if (typeof window.gtag === 'function') {
-          window.gtag('event', 'AI_assistant', {
-            feature: 'chat_widget',
-            state: 'open',
-          });
-        }
-      } catch (_) {
-        // Ignore tracking failures; never block UI.
-      }
-    }
-
     chatState.open = open;
     if (chatFab) chatFab.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (chatPanel) chatPanel.classList.toggle('is-open', open);
@@ -437,6 +422,20 @@
         if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
         escapeFocusToInput();
       }, 50);
+    }
+  }
+
+  function trackAiAssistantOpen(source = 'unknown') {
+    // GA4 custom event. Reference: gtag('event', 'event_name', { ...params })
+    // Requirement: fire when user clicks "打开对话机器人".
+    try {
+      if (typeof window.gtag !== 'function') return;
+      window.gtag('event', 'AI_assistant', {
+        source,
+        action: 'open',
+      });
+    } catch (_) {
+      // Never block UX due to analytics.
     }
   }
 
@@ -535,7 +534,11 @@
     // Greeting
     addChatMsg('assistant', '你好，我是 Loki AI 分身。你想先聊时间线、工具清单，还是 MVP？');
 
-    chatFab.addEventListener('click', () => setChatOpen(!chatState.open));
+    chatFab.addEventListener('click', () => {
+      // Track only on "open" click.
+      if (!chatState.open) trackAiAssistantOpen('fab');
+      setChatOpen(!chatState.open);
+    });
     chatBackdrop?.addEventListener('click', () => setChatOpen(false));
 
     chatPanel.addEventListener('click', (e) => {
