@@ -667,6 +667,66 @@
       </div>
     </footer>
 
+    <!-- Advanced: AI chatbot widget (Bailian via Vercel Serverless proxy). -->
+    <button class="chatFab" type="button" aria-label="打开对话机器人" aria-controls="chatPanel" aria-expanded="false">
+      <img class="chatFab__icon" src="./assets/images/chat-fab.svg" alt="" aria-hidden="true" />
+    </button>
+
+    <div class="chatBackdrop" data-chat-action="close" aria-hidden="true"></div>
+
+    <aside class="chatPanel" id="chatPanel" role="dialog" aria-label="Loki 的 AI 数字分身" aria-modal="false">
+      <header class="chatPanel__head">
+        <div class="chatPanel__title">
+          <span class="chatPanel__dot" aria-hidden="true"></span>
+          Loki AI 分身（百炼）
+        </div>
+        <div class="chatPanel__headActions">
+          <button class="iconBtn" type="button" data-chat-action="toggleSettings" aria-label="设置">
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <button class="iconBtn" type="button" data-chat-action="close" aria-label="关闭">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="chatPanel__settings" hidden>
+        <div class="chatSettingsGrid">
+          <label class="field">
+            <div class="field__k">API 地址（代理）</div>
+            <input class="field__input" id="chatEndpoint" type="text" placeholder="/api/chat" autocomplete="off" />
+            <div class="field__hint">默认使用本站的 `/api/chat`，不会在浏览器保存百炼 API Key。</div>
+          </label>
+
+          <label class="field">
+            <div class="field__k">管理员口令（仅自己用）</div>
+            <input class="field__input" id="chatPassword" type="password" placeholder="在 Vercel 环境变量里配置的口令" autocomplete="off" />
+            <div class="field__hint">口令只保存在当前浏览器会话（session），刷新后仍可用，关闭浏览器会失效。</div>
+          </label>
+
+          <label class="field field--full">
+            <div class="field__k">System Prompt（人设）</div>
+            <textarea class="field__input field__textarea" id="chatSystemPrompt" rows="5" placeholder="例如：你是 Loki 的 AI 数字分身…"></textarea>
+            <div class="field__hint">会作为对话的“系统指令”前置到提示词中。</div>
+          </label>
+        </div>
+
+        <div class="chatSettingsActions">
+          <button class="btn btn--ghost" type="button" data-chat-action="resetSettings">恢复默认</button>
+          <button class="btn btn--primary" type="button" data-chat-action="saveSettings">保存设置</button>
+        </div>
+
+        <div class="chatStatus" id="chatStatus" aria-live="polite"></div>
+      </section>
+
+      <div class="chatPanel__msgs" id="chatMsgs" aria-live="polite" aria-relevant="additions"></div>
+
+      <form class="chatPanel__composer" id="chatForm">
+        <textarea class="chatPanel__input" id="chatInput" rows="2" placeholder="输入消息…（Enter 发送 / Shift+Enter 换行）"></textarea>
+        <button class="btn btn--primary chatPanel__send" type="submit">发送</button>
+      </form>
+    </aside>
+
     <script src="./script.js" defer></script>
   </body>
 </html>

@@ -330,6 +330,233 @@
     });
   });
 
+  // --- Advanced: chatbot widget (Bailian via /api/chat proxy) ---
+  const chatFab = document.querySelector('.chatFab');
+  const chatPanel = document.getElementById('chatPanel');
+  const chatBackdrop = document.querySelector('.chatBackdrop');
+  const chatMsgs = document.getElementById('chatMsgs');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+  const chatEndpointInput = document.getElementById('chatEndpoint');
+  const chatPasswordInput = document.getElementById('chatPassword');
+  const chatSystemPromptInput = document.getElementById('chatSystemPrompt');
+  const chatStatus = document.getElementById('chatStatus');
+  const chatSettings = chatPanel ? chatPanel.querySelector('.chatPanel__settings') : null;
+
+  const CHAT_ENDPOINT_KEY = 'lokiChatEndpoint';
+  const CHAT_SYSTEM_KEY = 'lokiChatSystemPrompt';
+  const CHAT_PW_KEY = 'lokiChatPw';
+
+  const DEFAULT_ENDPOINT = '/api/chat';
+  const DEFAULT_SYSTEM =
+    '你是 Loki 的 AI 数字分身。你熟悉这个展示站的内容（学习时间线 Day 01-07、工具清单、MVP 成果展示）。语气：赛博但克制、简洁有条理、以“我”为第一人称。';
+
+  const chatState = {
+    open: false,
+    sending: false,
+    messages: [],
+  };
+
+  function setChatStatus(text, kind = 'info') {
+    if (!chatStatus) return;
+    chatStatus.textContent = text || '';
+    chatStatus.dataset.kind = kind;
+  }
+
+  function loadChatSettings() {
+    const endpoint = localStorage.getItem(CHAT_ENDPOINT_KEY) || DEFAULT_ENDPOINT;
+    const systemPrompt = localStorage.getItem(CHAT_SYSTEM_KEY) || DEFAULT_SYSTEM;
+    const pw = sessionStorage.getItem(CHAT_PW_KEY) || '';
+
+    if (chatEndpointInput) chatEndpointInput.value = endpoint;
+    if (chatSystemPromptInput) chatSystemPromptInput.value = systemPrompt;
+    if (chatPasswordInput) chatPasswordInput.value = pw;
+  }
+
+  function saveChatSettings() {
+    const endpoint = (chatEndpointInput ? chatEndpointInput.value : '').trim() || DEFAULT_ENDPOINT;
+    const systemPrompt = (chatSystemPromptInput ? chatSystemPromptInput.value : '').trim() || DEFAULT_SYSTEM;
+    const pw = (chatPasswordInput ? chatPasswordInput.value : '').trim();
+
+    localStorage.setItem(CHAT_ENDPOINT_KEY, endpoint);
+    localStorage.setItem(CHAT_SYSTEM_KEY, systemPrompt);
+    if (pw) sessionStorage.setItem(CHAT_PW_KEY, pw);
+
+    setChatStatus('设置已保存。', 'ok');
+  }
+
+  function resetChatSettings() {
+    localStorage.setItem(CHAT_ENDPOINT_KEY, DEFAULT_ENDPOINT);
+    localStorage.setItem(CHAT_SYSTEM_KEY, DEFAULT_SYSTEM);
+    sessionStorage.removeItem(CHAT_PW_KEY);
+    loadChatSettings();
+    setChatStatus('已恢复默认设置。', 'info');
+  }
+
+  function getChatEndpoint() {
+    return (localStorage.getItem(CHAT_ENDPOINT_KEY) || DEFAULT_ENDPOINT).trim() || DEFAULT_ENDPOINT;
+  }
+
+  function getChatSystemPrompt() {
+    return (localStorage.getItem(CHAT_SYSTEM_KEY) || DEFAULT_SYSTEM).trim() || DEFAULT_SYSTEM;
+  }
+
+  function getChatPassword() {
+    return (sessionStorage.getItem(CHAT_PW_KEY) || '').trim();
+  }
+
+  function escapeFocusToInput() {
+    if (!chatInput) return;
+    chatInput.focus({ preventScroll: true });
+  }
+
+  function setChatOpen(open) {
+    chatState.open = open;
+    if (chatFab) chatFab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (chatPanel) chatPanel.classList.toggle('is-open', open);
+    if (chatBackdrop) chatBackdrop.classList.toggle('is-open', open);
+
+    if (open) {
+      // Auto-scroll and focus.
+      window.setTimeout(() => {
+        if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        escapeFocusToInput();
+      }, 50);
+    }
+  }
+
+  function addChatMsg(role, content) {
+    const msg = { role, content: String(content || ''), ts: Date.now() };
+    chatState.messages.push(msg);
+    renderChatMsg(msg);
+    if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    return msg;
+  }
+
+  function renderChatMsg(msg) {
+    if (!chatMsgs) return;
+
+    const wrap = document.createElement('article');
+    wrap.className = `chatMsg chatMsg--${msg.role === 'user' ? 'user' : 'assistant'}`;
+
+    const meta = document.createElement('div');
+    meta.className = 'chatMsg__meta';
+    meta.textContent = msg.role === 'user' ? '你' : 'Loki AI';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chatMsg__bubble';
+    bubble.textContent = msg.content;
+
+    wrap.appendChild(meta);
+    wrap.appendChild(bubble);
+    chatMsgs.appendChild(wrap);
+  }
+
+  async function sendChat(text) {
+    if (chatState.sending) return;
+
+    const pw = getChatPassword();
+    if (!pw) {
+      setChatStatus('请先在设置里输入管理员口令（仅自己用）。', 'err');
+      if (chatSettings) chatSettings.hidden = false;
+      setChatOpen(true);
+      return;
+    }
+
+    const endpoint = getChatEndpoint();
+    const systemPrompt = getChatSystemPrompt();
+
+    chatState.sending = true;
+    setChatStatus('', 'info');
+
+    addChatMsg('user', text);
+    const placeholder = addChatMsg('assistant', '正在思考…');
+
+    try {
+      // Limit history sent to server to avoid huge prompts.
+      const messages = chatState.messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .slice(-14)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-chat-admin-password': pw,
+        },
+        body: JSON.stringify({
+          systemPrompt,
+          messages,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data && data.error ? data.error : `请求失败（HTTP ${res.status}）`;
+        throw new Error(msg);
+      }
+
+      // Replace placeholder content (no re-render complexity; just update last bubble text).
+      placeholder.content = data.text || '(无输出)';
+      const lastBubble = chatMsgs ? chatMsgs.querySelector('.chatMsg:last-child .chatMsg__bubble') : null;
+      if (lastBubble) lastBubble.textContent = placeholder.content;
+    } catch (err) {
+      // Replace placeholder with error.
+      const e = err instanceof Error ? err.message : String(err);
+      placeholder.content = `出错了：${e}`;
+      const lastBubble = chatMsgs ? chatMsgs.querySelector('.chatMsg:last-child .chatMsg__bubble') : null;
+      if (lastBubble) lastBubble.textContent = placeholder.content;
+      setChatStatus('调用失败：请检查 Vercel 环境变量 / 口令 / 百炼配置。', 'err');
+    } finally {
+      chatState.sending = false;
+      if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+  }
+
+  if (chatFab && chatPanel) {
+    loadChatSettings();
+
+    // Greeting
+    addChatMsg('assistant', '你好，我是 Loki AI 分身。你想先聊时间线、工具清单，还是 MVP？');
+
+    chatFab.addEventListener('click', () => setChatOpen(!chatState.open));
+    chatBackdrop?.addEventListener('click', () => setChatOpen(false));
+
+    chatPanel.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-chat-action]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-chat-action');
+      if (action === 'close') setChatOpen(false);
+      if (action === 'toggleSettings' && chatSettings) chatSettings.hidden = !chatSettings.hidden;
+      if (action === 'saveSettings') saveChatSettings();
+      if (action === 'resetSettings') resetChatSettings();
+    });
+
+    // Enter to send / Shift+Enter newline.
+    chatInput?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (e.shiftKey) return;
+      e.preventDefault();
+      chatForm?.requestSubmit();
+    });
+
+    chatForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = (chatInput ? chatInput.value : '').trim();
+      if (!text) return;
+      if (chatInput) chatInput.value = '';
+      sendChat(text);
+    });
+
+    // Close chat on Escape.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!chatState.open) return;
+      setChatOpen(false);
+    });
+  }
+
   // Reveal on scroll
   if (!prefersReduced && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver(
@@ -348,4 +575,3 @@
     document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
   }
 })();
-
