@@ -1,6 +1,21 @@
 (() => {
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // PostHog init (public key; safe to expose in browser).
+  // Loaded via <script defer src="https://us.i.posthog.com/static/array.js"></script>
+  const POSTHOG_KEY = 'phc_mJbmGgvM48yIWCvlFWBWEbmcRT4N2EqMqfcsWuv5NDH';
+  const POSTHOG_HOST = 'https://us.i.posthog.com';
+  try {
+    if (window.posthog && typeof window.posthog.init === 'function') {
+      window.posthog.init(POSTHOG_KEY, {
+        api_host: POSTHOG_HOST,
+        autocapture: true,
+      });
+    }
+  } catch (_) {
+    // Never block UX due to analytics.
+  }
+
   // FX toggle state (default ON). Persist to localStorage.
   const FX_KEY = 'lokiFxEnabled';
   function getFxEnabled() {
@@ -426,7 +441,7 @@
   }
 
   function trackAiAssistantOpen(source = 'unknown') {
-    // GA4 custom event. Reference: gtag('event', 'event_name', { ...params })
+    // GA4 + PostHog custom event.
     // Requirement: fire when user clicks "打开对话机器人".
     try {
       if (typeof window.gtag !== 'function') return;
@@ -434,6 +449,17 @@
         source,
         action: 'open',
       });
+    } catch (_) {
+      // Never block UX due to analytics.
+    }
+
+    try {
+      if (window.posthog && typeof window.posthog.capture === 'function') {
+        window.posthog.capture('AI_assistant', {
+          source,
+          action: 'open',
+        });
+      }
     } catch (_) {
       // Never block UX due to analytics.
     }
