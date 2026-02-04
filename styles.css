@@ -743,22 +743,17 @@ body.fx-off .hero__video {
 }
 
 .mvpCard__head {
+  position: relative;
   padding: 18px 18px 12px;
+  padding-right: 150px; /* reserve space for the top-right demo button */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "badge demo"
-    "title demo";
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 10px;
+  gap: 10px;
 }
 
 .mvpCard__badge {
   display: inline-flex;
   width: fit-content;
-  grid-area: badge;
   font-family: var(--font-display);
   font-size: 11px;
   letter-spacing: 0.9px;
@@ -769,18 +764,38 @@ body.fx-off .hero__video {
 }
 
 .mvpCard__title {
-  grid-area: title;
   margin: 0;
   font-size: 16px;
 }
 
 .mvpCard__demoBtn {
-  grid-area: demo;
-  justify-self: end;
-  align-self: center;
-  height: 42px;
-  padding: 0 16px;
-  border-radius: 12px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 42, 42, 0.55);
+  background: radial-gradient(140% 160% at 20% 0%, rgba(255, 42, 42, 0.35), rgba(255, 255, 255, 0.02) 65%),
+    rgba(0, 0, 0, 0.22);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 42, 42, 0.12);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.mvpCard__demoBtn:hover {
+  border-color: rgba(255, 42, 42, 0.80);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255, 42, 42, 0.18);
+}
+
+.mvpCard__demoBtn:focus-visible {
+  outline: 2px solid var(--red2);
+  outline-offset: 3px;
 }
 
 .mvpCard__body {
@@ -960,6 +975,17 @@ body.fx-off .hero__video {
     margin: 0 18px 12px;
     width: fit-content;
   }
+
+  /* Avoid overlap on small screens: place MVP demo button below the header line. */
+  .mvpCard__head {
+    padding-right: 18px;
+  }
+
+  .mvpCard__demoBtn {
+    position: static;
+    margin: 0 18px 12px;
+    width: fit-content;
+  }
 }
 
 @media (max-width: 520px) {
@@ -969,19 +995,6 @@ body.fx-off .hero__video {
 
   .brand__text {
     font-size: 13px;
-  }
-
-  .mvpCard__head {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "badge"
-      "title"
-      "demo";
-    align-items: start;
-  }
-
-  .mvpCard__demoBtn {
-    justify-self: start;
   }
 }
 
