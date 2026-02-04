@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>图片格式转换器</title>
+    <style>
+      :root {
+        --bg-1: #0b1020;
+        --bg-2: #161b2f;
+        --bg-3: #222844;
+        --ink: #f5f1e8;
+        --ink-dim: #c9c4b7;
+        --accent: #f09a4d;
+        --accent-2: #56c8a5;
+        --edge: rgba(255, 255, 255, 0.12);
+        --glass: rgba(255, 255, 255, 0.06);
+        --shadow: rgba(11, 16, 32, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Gill Sans", "Century Gothic", "Trebuchet MS", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(1200px 700px at 10% 10%, #1f2540 0%, #0b1020 45%, #070b16 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .page {
+        width: min(1100px, 94vw);
+        margin: 32px 0 48px;
+        padding: 28px clamp(18px, 4vw, 40px) 40px;
+        background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+        border: 1px solid var(--edge);
+        border-radius: 26px;
+        box-shadow: 0 30px 70px var(--shadow);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .page::before,
+      .page::after {
+        content: "";
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(240, 154, 77, 0.35), transparent 60%);
+        top: -140px;
+        right: -120px;
+        z-index: 0;
+      }
+
+      .page::after {
+        width: 320px;
+        height: 320px;
+        top: unset;
+        right: unset;
+        bottom: -140px;
+        left: -120px;
+        background: radial-gradient(circle at 40% 40%, rgba(86, 200, 165, 0.3), transparent 60%);
+      }
+
+      header,
+      main {
+        position: relative;
+        z-index: 1;
+      }
+
+      h1 {
+        font-size: clamp(32px, 4vw, 48px);
+        letter-spacing: 0.5px;
+        margin: 0 0 12px;
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--ink-dim);
+        max-width: 720px;
+        line-height: 1.5;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin: 24px 0 18px;
+      }
+
+      label {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1.1px;
+        color: var(--ink-dim);
+      }
+
+      select,
+      input[type="range"] {
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      select,
+      button,
+      .drop-zone {
+        background: var(--glass);
+        border: 1px solid var(--edge);
+        color: var(--ink);
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-family: inherit;
+        font-size: 16px;
+      }
+
+      select {
+        color: #111;
+        background: rgba(255, 255, 255, 0.85);
+      }
+
+      select:focus,
+      button:focus,
+      .drop-zone:focus-within {
+        outline: 2px solid rgba(240, 154, 77, 0.6);
+        outline-offset: 2px;
+      }
+
+      .drop-zone {
+        margin-top: 18px;
+        min-height: 180px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 30px;
+        border-style: dashed;
+        transition: transform 0.25s ease, border-color 0.25s ease;
+        animation: floatIn 0.8s ease both;
+      }
+
+      .drop-zone.dragging {
+        border-color: var(--accent);
+        transform: scale(1.01);
+        background: rgba(240, 154, 77, 0.08);
+      }
+
+      .drop-zone strong {
+        display: block;
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--ink-dim);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 20px 0 12px;
+      }
+
+      button {
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      button.primary {
+        background: linear-gradient(140deg, var(--accent), #f6bb7a);
+        color: #24170a;
+        border: none;
+      }
+
+      button.ghost {
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .list {
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .card {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 14px;
+        align-items: center;
+        background: rgba(10, 14, 26, 0.7);
+        border: 1px solid var(--edge);
+        border-radius: 16px;
+        padding: 12px 16px;
+        animation: riseIn 0.35s ease both;
+      }
+
+      .thumb {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        object-fit: cover;
+      }
+
+      .meta {
+        display: grid;
+        gap: 6px;
+      }
+
+      .meta strong {
+        font-size: 15px;
+      }
+
+      .meta span {
+        font-size: 13px;
+        color: var(--ink-dim);
+      }
+
+      .status {
+        font-size: 13px;
+        color: var(--accent-2);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        font-size: 13px;
+        color: var(--ink-dim);
+      }
+
+      @keyframes floatIn {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes riseIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @media (max-width: 720px) {
+        .card {
+          grid-template-columns: 1fr;
+          text-align: left;
+        }
+
+        .thumb {
+          width: 100%;
+          height: 160px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>图片格式转换器</h1>
+        <p>拖入多张图片，选择输出格式，然后逐张下载。所有转换都在浏览器本地完成。</p>
+      </header>
+      <main>
+        <section class="controls">
+          <div>
+            <label for="format">输出格式</label>
+            <select id="format">
+              <option value="image/png">PNG (.png)</option>
+              <option value="image/jpeg">JPEG (.jpg)</option>
+              <option value="image/webp">WebP (.webp)</option>
+            </select>
+          </div>
+          <div>
+            <label for="quality">画质（有损）</label>
+            <input id="quality" type="range" min="0.5" max="1" step="0.05" value="0.9" />
+            <div class="hint" id="qualityLabel">0.90（仅影响 JPEG/WebP）</div>
+          </div>
+          <div>
+            <label for="scale">缩放比例</label>
+            <input id="scale" type="range" min="0.2" max="2" step="0.1" value="1" />
+            <div class="hint" id="scaleLabel">1.0 倍</div>
+          </div>
+        </section>
+
+        <div class="drop-zone" id="dropZone" tabindex="0">
+          <div>
+            <strong>拖拽图片到这里</strong>
+            <div class="hint">或点击选择文件（支持 PNG、JPEG、WebP、BMP、GIF、TIFF、SVG）</div>
+            <div class="hint">也支持截图后直接 Ctrl+V 粘贴</div>
+          </div>
+          <input id="fileInput" class="hidden" type="file" accept="image/*" multiple />
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="convertAll">全部转换</button>
+          <button class="ghost" id="pasteFromClipboard">从剪贴板导入</button>
+          <button class="ghost" id="downloadZip">批量打包下载</button>
+          <button class="ghost" id="clearAll">清空列表</button>
+        </div>
+
+        <div class="list" id="list"></div>
+        <div class="footer-note">
+          注：输出格式取决于浏览器支持。PNG/JPEG/WebP 通常可用；GIF 只会输出第一帧。
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+      const list = document.getElementById("list");
+      const format = document.getElementById("format");
+      const quality = document.getElementById("quality");
+      const qualityLabel = document.getElementById("qualityLabel");
+      const scale = document.getElementById("scale");
+      const scaleLabel = document.getElementById("scaleLabel");
+      const convertAll = document.getElementById("convertAll");
+      const pasteFromClipboard = document.getElementById("pasteFromClipboard");
+      const downloadZip = document.getElementById("downloadZip");
+      const clearAll = document.getElementById("clearAll");
+
+      const state = [];
+
+      function updateQualityLabel() {
+        qualityLabel.textContent = `${Number(quality.value).toFixed(2)}（仅影响 JPEG/WebP）`;
+      }
+
+      function updateScaleLabel() {
+        scaleLabel.textContent = `${Number(scale.value).toFixed(1)} 倍`;
+      }
+
+      updateQualityLabel();
+      updateScaleLabel();
+
+      quality.addEventListener("input", updateQualityLabel);
+      scale.addEventListener("input", updateScaleLabel);
+
+      dropZone.addEventListener("click", () => fileInput.click());
+      dropZone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropZone.classList.add("dragging");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragging"));
+      dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("dragging");
+        handleFiles(event.dataTransfer.files);
+      });
+
+      fileInput.addEventListener("change", () => handleFiles(fileInput.files));
+
+      convertAll.addEventListener("click", async () => {
+        for (const item of state) {
+          if (!item.done) {
+            await convertOne(item);
+          }
+        }
+      });
+
+      downloadZip.addEventListener("click", async () => {
+        if (state.length === 0) {
+          alert("没有可打包的图片。");
+          return;
+        }
+        downloadZip.disabled = true;
+        try {
+          const converted = [];
+          for (const item of state) {
+            const blob = await convertToBlob(item.file);
+            const outputName = item.file.name.replace(/\.[^/.]+$/, "");
+            const ext = getExtension(format.value);
+            converted.push({
+              name: `${outputName}.${ext}`,
+              blob,
+            });
+          }
+          const zipBlob = await buildZip(converted);
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(zipBlob);
+          link.download = `converted-${Date.now()}.zip`;
+          link.click();
+          URL.revokeObjectURL(link.href);
+        } catch (err) {
+          console.error(err);
+          alert("打包失败，请重试。");
+        } finally {
+          downloadZip.disabled = false;
+        }
+      });
+
+      pasteFromClipboard.addEventListener("click", async () => {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          alert("当前浏览器不支持剪贴板读取，请用 Ctrl+V 粘贴。");
+          return;
+        }
+        try {
+          const items = await navigator.clipboard.read();
+          const files = [];
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith("image/")) {
+                const blob = await item.getType(type);
+                files.push(blob);
+              }
+            }
+          }
+          if (files.length === 0) {
+            alert("剪贴板里没有图片。");
+            return;
+          }
+          handleFilesFromBlobs(files);
+        } catch (err) {
+          alert("无法读取剪贴板，请用 Ctrl+V 粘贴。");
+          console.error(err);
+        }
+      });
+
+      clearAll.addEventListener("click", () => {
+        state.splice(0, state.length);
+        list.innerHTML = "";
+      });
+
+      function handleFiles(files) {
+        [...files].forEach((file) => {
+          if (!file.type.startsWith("image/")) return;
+          addFileItem(file);
+        });
+      }
+
+      function handleFilesFromBlobs(blobs) {
+        blobs.forEach((blob, index) => {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const fileName = `screenshot-${timestamp}-${index + 1}.png`;
+          const file = new File([blob], fileName, { type: blob.type || "image/png" });
+          addFileItem(file);
+        });
+      }
+
+      function addFileItem(file) {
+        const id = crypto.randomUUID();
+        const item = { id, file, done: false };
+        state.push(item);
+        renderCard(item);
+      }
+
+      function renderCard(item) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.dataset.id = item.id;
+
+        const img = document.createElement("img");
+        img.className = "thumb";
+        img.alt = item.file.name;
+        img.src = URL.createObjectURL(item.file);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const title = document.createElement("strong");
+        title.textContent = item.file.name;
+        const detail = document.createElement("span");
+        detail.textContent = `${(item.file.size / 1024).toFixed(1)} KB • ${item.file.type || "unknown"}`;
+        meta.append(title, detail);
+
+        const actions = document.createElement("div");
+        const status = document.createElement("div");
+        status.className = "status";
+        status.textContent = "就绪";
+        const btn = document.createElement("button");
+        btn.textContent = "转换";
+        btn.addEventListener("click", () => convertOne(item));
+        actions.append(status, btn);
+
+        card.append(img, meta, actions);
+        list.appendChild(card);
+      }
+
+      document.addEventListener("paste", (event) => {
+        const items = event.clipboardData?.items || [];
+        const blobs = [];
+        for (const item of items) {
+          if (item.type && item.type.startsWith("image/")) {
+            const blob = item.getAsFile();
+            if (blob) blobs.push(blob);
+          }
+        }
+        if (blobs.length > 0) {
+          handleFilesFromBlobs(blobs);
+        }
+      });
+
+      async function loadImage(file) {
+        if ("createImageBitmap" in window) {
+          return createImageBitmap(file);
+        }
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      function getExtension(mime) {
+        if (mime === "image/png") return "png";
+        if (mime === "image/jpeg") return "jpg";
+        if (mime === "image/webp") return "webp";
+        return "img";
+      }
+
+      async function convertOne(item) {
+        const card = list.querySelector(`[data-id="${item.id}"]`);
+        if (!card) return;
+        const status = card.querySelector(".status");
+        const button = card.querySelector("button");
+        status.textContent = "转换中...";
+        button.disabled = true;
+
+        try {
+          const blob = await convertToBlob(item.file);
+          if (!blob) {
+            throw new Error("Conversion failed");
+          }
+
+          const outputName = item.file.name.replace(/\.[^/.]+$/, "");
+          const ext = getExtension(format.value);
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${outputName}.${ext}`;
+          link.click();
+          URL.revokeObjectURL(link.href);
+
+          item.done = true;
+          status.textContent = "已下载";
+        } catch (err) {
+          status.textContent = "失败";
+          console.error(err);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      async function convertToBlob(file) {
+        const image = await loadImage(file);
+        const canvas = document.createElement("canvas");
+        const scaleValue = Number(scale.value);
+        const width = Math.max(1, Math.round(image.width * scaleValue));
+        const height = Math.max(1, Math.round(image.height * scaleValue));
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+
+        const mime = format.value;
+        const qualityValue = Number(quality.value);
+        return new Promise((resolve) => canvas.toBlob(resolve, mime, qualityValue));
+      }
+
+      // Minimal ZIP (store only) for multiple files, no compression.
+      async function buildZip(entries) {
+        const files = await Promise.all(
+          entries.map(async (entry) => {
+            const arrayBuffer = await entry.blob.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            const nameBytes = new TextEncoder().encode(entry.name);
+            const crc = crc32(data);
+            return { nameBytes, data, crc };
+          })
+        );
+
+        let offset = 0;
+        const fileParts = [];
+        const centralParts = [];
+
+        for (const file of files) {
+          const localHeader = new Uint8Array(30 + file.nameBytes.length);
+          const view = new DataView(localHeader.buffer);
+          view.setUint32(0, 0x04034b50, true);
+          view.setUint16(4, 20, true);
+          view.setUint16(6, 0, true);
+          view.setUint16(8, 0, true);
+          view.setUint16(10, 0, true);
+          view.setUint16(12, 0, true);
+          view.setUint32(14, file.crc, true);
+          view.setUint32(18, file.data.length, true);
+          view.setUint32(22, file.data.length, true);
+          view.setUint16(26, file.nameBytes.length, true);
+          view.setUint16(28, 0, true);
+          localHeader.set(file.nameBytes, 30);
+
+          fileParts.push(localHeader, file.data);
+
+          const centralHeader = new Uint8Array(46 + file.nameBytes.length);
+          const cview = new DataView(centralHeader.buffer);
+          cview.setUint32(0, 0x02014b50, true);
+          cview.setUint16(4, 20, true);
+          cview.setUint16(6, 20, true);
+          cview.setUint16(8, 0, true);
+          cview.setUint16(10, 0, true);
+          cview.setUint16(12, 0, true);
+          cview.setUint16(14, 0, true);
+          cview.setUint32(16, file.crc, true);
+          cview.setUint32(20, file.data.length, true);
+          cview.setUint32(24, file.data.length, true);
+          cview.setUint16(28, file.nameBytes.length, true);
+          cview.setUint16(30, 0, true);
+          cview.setUint16(32, 0, true);
+          cview.setUint16(34, 0, true);
+          cview.setUint16(36, 0, true);
+          cview.setUint32(38, 0, true);
+          cview.setUint32(42, offset, true);
+          centralHeader.set(file.nameBytes, 46);
+
+          centralParts.push(centralHeader);
+          offset += localHeader.length + file.data.length;
+        }
+
+        const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+        const end = new Uint8Array(22);
+        const endView = new DataView(end.buffer);
+        endView.setUint32(0, 0x06054b50, true);
+        endView.setUint16(4, 0, true);
+        endView.setUint16(6, 0, true);
+        endView.setUint16(8, files.length, true);
+        endView.setUint16(10, files.length, true);
+        endView.setUint32(12, centralSize, true);
+        endView.setUint32(16, offset, true);
+        endView.setUint16(20, 0, true);
+
+        return new Blob([...fileParts, ...centralParts, end], { type: "application/zip" });
+      }
+
+      function crc32(data) {
+        let crc = 0xffffffff;
+        for (let i = 0; i < data.length; i++) {
+          crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ data[i]) & 0xff];
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      const CRC32_TABLE = (() => {
+        const table = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let c = i;
+          for (let k = 0; k < 8; k++) {
+            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+          }
+          table[i] = c >>> 0;
+        }
+        return table;
+      })();
+    </script>
+  </body>
+</html>
