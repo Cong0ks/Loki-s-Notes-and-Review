@@ -746,12 +746,19 @@ body.fx-off .hero__video {
   padding: 18px 18px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
-  gap: 10px;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "badge demo"
+    "title demo";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 10px;
 }
 
 .mvpCard__badge {
   display: inline-flex;
   width: fit-content;
+  grid-area: badge;
   font-family: var(--font-display);
   font-size: 11px;
   letter-spacing: 0.9px;
@@ -762,8 +769,18 @@ body.fx-off .hero__video {
 }
 
 .mvpCard__title {
+  grid-area: title;
   margin: 0;
   font-size: 16px;
+}
+
+.mvpCard__demoBtn {
+  grid-area: demo;
+  justify-self: end;
+  align-self: center;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
 }
 
 .mvpCard__body {
@@ -952,6 +969,19 @@ body.fx-off .hero__video {
 
   .brand__text {
     font-size: 13px;
+  }
+
+  .mvpCard__head {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "badge"
+      "title"
+      "demo";
+    align-items: start;
+  }
+
+  .mvpCard__demoBtn {
+    justify-self: start;
   }
 }
 
