@@ -16,3 +16,7 @@ out/
 
 # Non-website files (keep local)
 Non-WebFile/
+
+# Session / deployment logs (local only, may contain sensitive data)
+*-session-log.md
+*.log.md
