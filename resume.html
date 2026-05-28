@@ -454,11 +454,155 @@
     .sidebar { padding: 28px 22px; }
     .strengths-grid { grid-template-columns: 1fr; }
   }
+
+  /* ============ ACCESS GATE ============ */
+  #resume-content { display: none; }
+  #resume-content.visible { display: block; }
+
+  #access-gate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    flex-direction: column;
+    gap: 20px;
+  }
+  #access-gate.hidden { display: none; }
+
+  .gate-card {
+    border: 1px solid var(--stroke);
+    background: radial-gradient(140% 160% at 0% 0%, var(--redGlow2), rgba(255,255,255,0.02) 55%), rgba(0,0,0,0.30);
+    border-radius: var(--radius);
+    padding: 36px 32px;
+    max-width: 400px;
+    width: calc(100% - 40px);
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.50);
+  }
+  .gate-card .gate-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  .gate-card h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .gate-card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .gate-card .gate-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: rgba(0,0,0,0.50);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 2px;
+    outline: none;
+    transition: border-color 160ms;
+  }
+  .gate-card .gate-input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px var(--redGlow2);
+  }
+  .gate-card .gate-btn {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,42,42,0.55);
+    background: radial-gradient(130% 150% at 20% 0%, rgba(255,42,42,0.35), rgba(255,255,255,0.02) 60%), rgba(0,0,0,0.22);
+    color: rgba(255,255,255,0.92);
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    transition: box-shadow 160ms;
+  }
+  .gate-card .gate-btn:hover {
+    border-color: rgba(255,42,42,0.75);
+    box-shadow: 0 0 18px var(--redGlow);
+  }
+  .gate-error {
+    font-size: 12px;
+    color: var(--red2);
+    min-height: 18px;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
 
-<div class="page">
+<script>
+// --- Token Gate ---
+// Change this to your own secret token
+var VALID_TOKEN = "resume2026-loki";
+
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var urlToken = params.get("token");
+  var stored = sessionStorage.getItem("_resume_granted");
+
+  if (stored === VALID_TOKEN || urlToken === VALID_TOKEN) {
+    sessionStorage.setItem("_resume_granted", VALID_TOKEN);
+    document.getElementById("resume-content").classList.add("visible");
+    document.getElementById("access-gate").classList.add("hidden");
+    document.body.style.display = "";
+  } else {
+    document.getElementById("access-gate").classList.remove("hidden");
+    document.body.style.display = "flex";
+  }
+
+  window._gateVerify = function() {
+    var input = document.getElementById("gate-token-input");
+    var err = document.getElementById("gate-error");
+    var val = input.value.trim();
+    if (val === VALID_TOKEN) {
+      sessionStorage.setItem("_resume_granted", VALID_TOKEN);
+      window.location.href = window.location.pathname + "?token=" + encodeURIComponent(VALID_TOKEN);
+    } else {
+      err.textContent = "Token 不正确，请重试";
+      input.value = "";
+      input.focus();
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", function() {
+    var input = document.getElementById("gate-token-input");
+    if (input) {
+      input.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") window._gateVerify();
+      });
+    }
+  });
+})();
+</script>
+
+<div id="access-gate">
+  <div class="gate-card">
+    <div class="gate-icon">&#x1F512;</div>
+    <h2>Access Restricted</h2>
+    <p>此页面需要授权访问。请输入访问密钥后继续。</p>
+    <input type="password" class="gate-input" id="gate-token-input" placeholder="请输入访问密钥" autocomplete="off" />
+    <div class="gate-error" id="gate-error"></div>
+    <button class="gate-btn" onclick="_gateVerify()">确 认</button>
+  </div>
+</div>
+
+<div id="resume-content" class="page">
 
   <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
@@ -689,7 +833,8 @@
 
   </main>
 
-</div>
+</div> <!-- .page -->
+</div> <!-- #resume-content -->
 
 </body>
 </html>
