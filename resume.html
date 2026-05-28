@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>杨钟杰 — 技术专家 / 基础设施架构师</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0: #07080a;
+    --bg1: #0b0d10;
+    --panel: rgba(255,255,255,0.05);
+    --panel2: rgba(255,255,255,0.07);
+    --stroke: rgba(255,255,255,0.08);
+    --stroke2: rgba(255,255,255,0.12);
+    --text: rgba(255,255,255,0.92);
+    --muted: rgba(255,255,255,0.66);
+    --muted2: rgba(255,255,255,0.48);
+    --red: #ff2a2a;
+    --red2: #ff4d4d;
+    --redGlow: rgba(255,42,42,0.30);
+    --redGlow2: rgba(255,42,42,0.12);
+    --radius: 16px;
+    --font-display: "Orbitron", system-ui, sans-serif;
+    --font-body: "Noto Sans SC", system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    color: var(--text);
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(255,42,42,0.18), transparent 55%),
+      radial-gradient(800px 500px at 80% 30%, rgba(255,75,75,0.08), transparent 60%),
+      radial-gradient(900px 700px at 50% 90%, rgba(255,42,42,0.06), transparent 60%),
+      linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #050507);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.7;
+    letter-spacing: 0.2px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 28px 18px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Grid overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.25;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(circle at 50% 30%, rgba(0,0,0,1), rgba(0,0,0,0.3) 55%, rgba(0,0,0,0) 76%);
+    z-index: 0;
+  }
+
+  /* Scanlines */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.10;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0) 0px,
+      rgba(255,255,255,0) 2px,
+      rgba(255,42,42,0.04) 3px,
+      rgba(255,255,255,0) 6px
+    );
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1100px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--stroke);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.65), 0 0 0 1px var(--redGlow2);
+  }
+
+  /* ============ SIDEBAR ============ */
+  .sidebar {
+    background:
+      radial-gradient(300px 400px at 50% 10%, rgba(255,42,42,0.10), transparent 55%),
+      linear-gradient(180deg, rgba(10,12,16,0.98), rgba(8,10,14,0.98));
+    border-right: 1px solid var(--stroke);
+    padding: 40px 28px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    backdrop-filter: blur(8px);
+  }
+
+  .sidebar .name-block {}
+  .sidebar .name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1.5px;
+    line-height: 1.2;
+  }
+  .sidebar .name-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--red2);
+    letter-spacing: 1px;
+    font-family: var(--font-display);
+  }
+  .sidebar .name-sub::before {
+    content: '';
+    width: 18px; height: 1px; background: var(--red);
+    opacity: 0.6;
+  }
+
+  .sidebar section h3 {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--red2);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .sidebar .contact-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sidebar .contact-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar .contact-list .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red); opacity: 0.5; flex-shrink: 0;
+  }
+
+  /* Timeline in sidebar */
+  .tl-track {
+    position: relative;
+    padding-left: 13px;
+  }
+  .tl-track::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 5px; bottom: 5px;
+    width: 1px;
+    background: rgba(255,255,255,0.10);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 11px;
+    font-size: 12px;
+  }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -16px; top: 6px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 10px var(--redGlow);
+  }
+  .tl-year {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--red2);
+    letter-spacing: 1px;
+    margin-bottom: 1px;
+  }
+  .tl-desc { color: var(--muted2); font-size: 11px; }
+
+  /* Skill tags */
+  .skill-tags {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .skill-tags span {
+    font-size: 10px; padding: 3px 9px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    letter-spacing: 0.3px;
+  }
+
+  /* Cert list */
+  .cert-list { list-style: none; font-size: 11px; color: var(--muted2); display: flex; flex-direction: column; gap: 4px; }
+  .cert-list li::before { content: '· '; color: var(--red2); }
+
+  /* ============ MAIN ============ */
+  .main {
+    background:
+      radial-gradient(500px 500px at 80% 20%, rgba(255,42,42,0.06), transparent 50%),
+      linear-gradient(180deg, rgba(14,16,20,0.96), rgba(11,13,17,0.96));
+    padding: 40px 38px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .main section h3 {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    text-transform: uppercase;
+  }
+  .main section h3::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: -1px;
+    width: 30px; height: 2px;
+    background: var(--red);
+    box-shadow: 0 0 10px var(--redGlow);
+  }
+
+  /* Strengths grid */
+  .strengths-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+  }
+  .strengths-grid .item {
+    font-size: 12px;
+    padding: 5px 0 5px 14px;
+    position: relative;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .strengths-grid .item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 11px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    opacity: 0.7;
+  }
+
+  /* Work experience */
+  .work-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .work-header .company {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .work-header .date {
+    font-size: 11px;
+    color: var(--muted2);
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+  }
+  .work-role {
+    font-size: 12px;
+    color: var(--red2);
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+  .work-summary {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+  .work-achievements {
+    list-style: none;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .work-achievements li {
+    padding-left: 14px;
+    position: relative;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .work-achievements li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 9px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    opacity: 0.5;
+  }
+
+  /* Project cards */
+  .project-card {
+    border: 1px solid var(--stroke);
+    background:
+      radial-gradient(140% 160% at 0% 0%, var(--redGlow2), rgba(255,255,255,0.02) 55%),
+      rgba(0,0,0,0.18);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+    position: relative;
+  }
+  .project-card:last-child { margin-bottom: 0; }
+  .project-card::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow: 0 0 0 1px var(--redGlow), 0 0 24px var(--redGlow2);
+    transition: opacity 180ms ease;
+  }
+  .project-card:hover {
+    border-color: rgba(255,42,42,0.25);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.38);
+  }
+  .project-card:hover::after { opacity: 1; }
+
+  .project-card .pj-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .project-card .pj-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .project-card .pj-date {
+    font-size: 10px;
+    color: var(--muted2);
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+  }
+  .project-card .pj-bg {
+    font-size: 11px;
+    color: var(--muted2);
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  .project-card .pj-details {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* Community */
+  .community-item {
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--muted);
+    padding-left: 13px;
+    position: relative;
+  }
+  .community-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 8px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    opacity: 0.6;
+  }
+  .comm-title { font-weight: 600; color: #fff; }
+  .comm-date { font-size: 11px; color: var(--muted2); font-family: var(--font-display); }
+
+  .awards {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    padding-left: 13px;
+    position: relative;
+  }
+  .awards::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 9px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    opacity: 0.6;
+  }
+
+  .quote {
+    font-size: 11px;
+    color: var(--muted2);
+    font-style: italic;
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--stroke);
+    letter-spacing: 0.3px;
+  }
+
+  .edu-block { font-size: 12px; }
+  .edu-block .school { color: #fff; font-weight: 600; }
+  .edu-block .major { color: var(--muted); }
+  .edu-block .edu-date { color: var(--muted2); font-size: 11px; font-family: var(--font-display); }
+
+  /* ============ PRINT ============ */
+  @media print {
+    body {
+      background: #07080a !important;
+      padding: 0;
+    }
+    body::before, body::after { display: none; }
+    .page {
+      box-shadow: none;
+      max-width: 100%;
+      border: none;
+      border-radius: 0;
+      grid-template-columns: 270px 1fr;
+    }
+    .sidebar { padding: 22px 18px; gap: 20px; }
+    .main { padding: 22px 22px; gap: 20px; }
+    .project-card { break-inside: avoid; }
+    @page { margin: 0; size: A4; }
+  }
+
+  @media (max-width: 860px) {
+    .page { grid-template-columns: 1fr; }
+    .sidebar { padding: 28px 22px; }
+    .strengths-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+
+    <div class="name-block">
+      <div class="name">杨钟杰</div>
+      <div class="name-sub">Tech Lead / Architect</div>
+    </div>
+
+    <section>
+      <h3>Contact</h3>
+      <ul class="contact-list">
+        <li><span class="dot"></span> 138 8085 8374</li>
+        <li><span class="dot"></span> 399201029@qq.com</li>
+        <li><span class="dot"></span> 男 · 39岁 · 成都</li>
+        <li><span class="dot"></span> 19 年工作经验</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Career Path</h3>
+      <div class="tl-track">
+        <div class="tl-item">
+          <div class="tl-year">2007</div>
+          <div class="tl-desc">入职 · IT 基础运维</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2010</div>
+          <div class="tl-desc">从 0 创建信息安全中心</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2011</div>
+          <div class="tl-desc">接管 IDC · 服务器运维</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2015</div>
+          <div class="tl-desc">云化转型 · 百度智能云</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2021</div>
+          <div class="tl-desc">AI 探索 · OCR / AIGC</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">Now</div>
+          <div class="tl-desc">技术总监 · 管理 40 人</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Skills</h3>
+      <div class="skill-tags">
+        <span>Windows Server</span><span>Linux</span><span>VMware</span>
+        <span>ESXi</span><span>Hyper-V</span><span>KVM</span><span>Docker</span>
+        <span>NAS/RAID</span><span>TCP/IP</span><span>VLAN</span>
+        <span>Cisco</span><span>Huawei</span><span>H3C</span>
+        <span>Shell/Bash</span><span>Python</span><span>MSSQL</span>
+        <span>MySQL</span><span>ComfyUI</span><span>n8n</span>
+        <span>AI Agent</span><span>OpenClaw</span>
+      </div>
+    </section>
+
+    <section>
+      <h3>Certifications</h3>
+      <ul class="cert-list">
+        <li>CCNA 思科认证网络工程师</li>
+        <li>CKA 管理员认证</li>
+        <li>网络与信息安全管理师</li>
+        <li>网络通信安全管理员(四级)</li>
+        <li>微软 MCP 认证</li>
+        <li>硬件维护工程师</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Education</h3>
+      <div class="edu-block">
+        <div class="school">电子科技大学</div>
+        <div class="major">本科 · 计算机科学与技术</div>
+        <div class="edu-date">2022 — 2024</div>
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+
+    <section>
+      <h3>Core Strengths</h3>
+      <div class="strengths-grid">
+        <div class="item">10年+ IT 基础设施实战，100+ 服务器稳定运行</div>
+        <div class="item">从 0 构建企业信息安全体系（终端/网络/审计）</div>
+        <div class="item">中大型企业网络架构，千级终端接入</div>
+        <div class="item">容灾备份体系建设（NAS/Rsync 多副本）</div>
+        <div class="item">Shell / Bash / Python 运维自动化</div>
+        <div class="item">勒索病毒应急响应与业务快速恢复实战</div>
+        <div class="item">公有云接入与混合云演进（百度智能云）</div>
+        <div class="item">MSSQL / MySQL 基础运维与排障</div>
+        <div class="item">AI 落地实践：OCR / 人脸 / AIGC / Agent</div>
+        <div class="item">管理 40 人技术团队，双线汇报</div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Experience</h3>
+      <div class="work-header">
+        <span class="company">成都百都科技有限公司（百度营销四川服务中心）</span>
+        <span class="date">2007.10 — Present</span>
+      </div>
+      <div class="work-role">技术总监 / 基础设施负责人</div>
+      <div class="work-summary">
+        2007 年加入，从桌面运维起步，伴随公司从几十人扩张至千人规模，横跨 IT 基础设施、信息安全、IDC 运维、云化转型、AI 落地五大赛道。19 年从一线工程师成长为技术总监，统管 IDC 与信息安全中心（约 40 人），始终在一线解决关键问题。
+      </div>
+      <ul class="work-achievements">
+        <li>从 0 建立企业信息安全体系，推动终端规范、网络策略、安全基线与巡检机制落地</li>
+        <li>支撑总部 800 人 + 多分部 200 人办公，1000+ 终端接入，覆盖三层网络架构</li>
+        <li>基于 NAS、Rsync、异地备份持续迭代容灾方案，多次完成故障快速恢复</li>
+        <li>推动自动化运维，编写邮件巡检、自动备份脚本及多类运维工具</li>
+        <li>深度参与百度智能云 IaaS/SaaS/PaaS 项目落地</li>
+        <li>成立 AI 虚拟项目组，研究 AIGC、Workflow、AI Agent 前沿技术并推动内部应用</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Projects</h3>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">勒索病毒应急响应与企业安全体系升级</span>
+          <span class="pj-date">2023.01 — Present</span>
+        </div>
+        <div class="pj-bg">核心业务服务器遭遇勒索病毒攻击，牵头应急响应，同步启动三期安全改造计划。</div>
+        <div class="pj-details">
+          核心业务短时间内恢复，未发生大规模数据丢失；完成多节点备份与集中存储管理；建立周期性安全巡检机制；基础设施由"被动防护"升级为"可恢复 + 可预警"体系。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">企业呼叫中心通信系统建设与线路架构优化</span>
+          <span class="pj-date">2021.07 — Present</span>
+        </div>
+        <div class="pj-bg">从 0 搭建本地呼叫中心通信能力，与总部平台跨地域联通，后期将跨省专线平滑迁移至公网专线。</div>
+        <div class="pj-details">
+          呼叫中心从 0 上线，实现与总部稳定语音互通；通信架构平滑升级，在保障服务质量前提下显著降低长期通信成本；建立可复用的企业通信建设方法论。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">企业 AI 探索与业务系统落地</span>
+          <span class="pj-date">2021.04 — Present</span>
+        </div>
+        <div class="pj-bg">从 0 组建跨部门 AI 项目小组，引入 OCR、人脸识别及 AIGC，覆盖企业内部应用与政务级外部交付。</div>
+        <div class="pj-details">
+          发票验真系统上线，显著降低人工成本；智能考勤系统投入使用，刷脸打卡 + ERP 自动同步；政务级 OCR 项目顺利交付；AIGC 嵌入 ERP 完成 PoC 验证；累计服务千级用户，沉淀 AI 选型与落地方法论。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">企业终端与服务器数据容灾备份体系</span>
+          <span class="pj-date">2021.01 — Present</span>
+        </div>
+        <div class="pj-bg">规划建设统一的数据集中备份与异地容灾体系，解决数据分散与单点故障风险。</div>
+        <div class="pj-details">
+          建立覆盖终端与核心服务器的集中备份；关键数据多副本 + 跨设备同步；大幅降低单点故障风险，为业务系统提供稳定数据安全底座。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">企业网络安全合规与监管协作</span>
+          <span class="pj-date">2018.12 — Present</span>
+        </div>
+        <div class="pj-bg">配合外部监管要求，持续完善网络与信息安全治理体系，覆盖自查、整改、等保及应急协作。</div>
+        <div class="pj-details">
+          顺利完成多轮网络安全检查与专项整治，未发生重大安全事件；等保工作形成规范化流程；构建企业级自查与整改机制。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">办公无线网络升级与会议体验优化</span>
+          <span class="pj-date">2017.06 — Present</span>
+        </div>
+        <div class="pj-bg">公司无线网络架构老旧、并发不足，对核心办公及会议区域网络进行整体升级。</div>
+        <div class="pj-details">
+          核心会议区无线稳定性显著提升；高峰会议掉线卡顿明显减少；会议网络与办公网络物理隔离，增强安全性。
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="pj-header">
+          <span class="pj-title">企业邮件系统稳定性与安全治理</span>
+          <span class="pj-date">2011.10 — Present</span>
+        </div>
+        <div class="pj-bg">邮件系统随用户规模增长与客户端迭代出现资源占用高、投递异常、账号安全等问题，持续优化治理。</div>
+        <div class="pj-details">
+          邮件系统长期稳定运行，核心服务可用性显著提升；附件投递与登录问题有效解决；建立标准化巡检与应急处理机制。
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Community & Awards</h3>
+      <div class="community-item">
+        <span class="comm-title">成都 WaytoAGI 社区志愿者</span>
+        <span class="comm-date">2024.06 — Present（1年+）</span>
+        <br>协助组织每月切磋大会成都线下活动，跟踪 AI 前沿动态，链接 AI 社群成员促进知识分享。
+      </div>
+      <div class="community-item">
+        <span class="comm-title">成都飞桨领航团企业端城市团长</span>
+        <span class="comm-date">2022.12 — 2023.12</span>
+        <br>协助组织飞桨黑客松、AI 多平台部署 Meetup、1024 程序员节成都分会场等活动，获评"飞桨领航团金牌团长"。
+      </div>
+      <div class="awards">
+        <strong>百家号城市 AIGC 文旅视频创意项目</strong>「潜力之星」 ·
+        <strong>WaytoAGI VibeCoding 训练营</strong>结业 ·
+        <strong>OpenClaw 小龙虾训练营</strong>优秀学员
+      </div>
+    </section>
+
+    <div class="quote">
+      "AI 的价值，不在于替代重复，而是让人们有机会去尝试从未想过和从未做过的事"
+    </div>
+
+  </main>
+
+</div>
+
+</body>
+</html>
