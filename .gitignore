@@ -17,6 +17,9 @@ out/
 # Non-website files (keep local)
 Non-WebFile/
 
+# PRD documents (local only, not published)
+PRD-*.md
+
 # Session / deployment logs (local only, may contain sensitive data)
 *-session-log.md
 *.log.md
