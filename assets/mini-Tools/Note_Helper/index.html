@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>长图制作工具</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>长图制作工具</h1>
+            <p>按原始像素拼接图片，支持文字或图片水印。</p>
+          </div>
+          <div class="actions">
+            <button id="renderBtn" class="primary" type="button" disabled>生成预览</button>
+            <button id="downloadBtn" type="button" disabled>下载 PNG</button>
+          </div>
+        </header>
+
+        <section class="dropzone" id="dropzone">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <div class="drop-icon">+</div>
+          <strong>点击或拖入图片</strong>
+          <span>支持 9:16、16:9 等常见比例，可多选后排序。</span>
+        </section>
+
+        <section class="content-grid">
+          <aside class="panel">
+            <div class="panel-head">
+              <h2>图片队列</h2>
+              <button id="clearBtn" class="ghost" type="button" disabled>清空</button>
+            </div>
+            <ul id="imageList" class="image-list"></ul>
+          </aside>
+
+          <section class="preview-panel">
+            <div class="preview-head">
+              <h2>预览</h2>
+              <span id="canvasInfo">未生成</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="previewCanvas"></canvas>
+              <div id="emptyPreview" class="empty-preview">上传图片后生成长图预览</div>
+            </div>
+          </section>
+
+          <aside class="panel settings">
+            <h2>拼接设置</h2>
+            <label class="field">
+              <span>宽度策略</span>
+              <select id="widthMode">
+                <option value="fit-min">自动统一宽度：只缩小</option>
+                <option value="original">原始尺寸居中</option>
+                <option value="fit-max">强制统一为最大宽度</option>
+                <option value="custom">自定义宽度</option>
+              </select>
+            </label>
+            <label id="customWidthField" class="field hidden">
+              <span>目标宽度</span>
+              <input id="customWidth" type="number" min="100" max="20000" value="1536" />
+            </label>
+            <p class="hint">推荐只缩小不放大：能统一版面，又避免小图被拉伸变糊。</p>
+
+            <h2>边框</h2>
+            <label class="field">
+              <span>边框样式</span>
+              <select id="borderStyle">
+                <option value="none">无边框</option>
+                <option value="solid">纯色边框</option>
+                <option value="rainbow">彩色渐变</option>
+                <option value="dots">彩色圆点花边</option>
+                <option value="candy">糖果条纹花边</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>边框宽度</span>
+              <input id="borderWidth" type="number" min="0" max="240" value="48" />
+            </label>
+            <label class="field">
+              <span>纯色颜色</span>
+              <input id="borderColor" type="color" value="#f26b8a" />
+            </label>
+
+            <h2>水印</h2>
+            <label class="field check">
+              <input id="watermarkEnabled" type="checkbox" />
+              <span>启用水印</span>
+            </label>
+
+            <div class="segmented" role="group" aria-label="水印类型">
+              <button id="textModeBtn" class="active" type="button">文字</button>
+              <button id="imageModeBtn" type="button">图片</button>
+            </div>
+
+            <div id="textWatermarkFields" class="field-group">
+              <label class="field">
+                <span>水印文字</span>
+                <input id="watermarkText" type="text" value="Loki" />
+              </label>
+              <label class="field">
+                <span>字体大小</span>
+                <input id="fontSize" type="number" min="12" max="240" value="56" />
+              </label>
+              <label class="field">
+                <span>文字颜色</span>
+                <input id="textColor" type="color" value="#ffffff" />
+              </label>
+              <label class="field">
+                <span>文字角度</span>
+                <input id="textAngle" type="number" min="-180" max="180" value="0" />
+              </label>
+            </div>
+
+            <div id="imageWatermarkFields" class="field-group hidden">
+              <label class="field file-field">
+                <span>水印图片</span>
+                <input id="watermarkImage" type="file" accept="image/*" />
+              </label>
+              <div id="watermarkPreview" class="watermark-preview hidden">
+                <img id="watermarkPreviewImg" alt="图片水印预览" />
+                <span id="watermarkPreviewInfo"></span>
+              </div>
+              <label class="field">
+                <span>图片宽度</span>
+                <input id="watermarkWidth" type="number" min="24" max="1000" value="240" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span>水印数量</span>
+              <input id="watermarkCount" type="number" min="1" max="200" value="1" />
+            </label>
+
+            <label class="field">
+              <span>位置</span>
+              <select id="watermarkPosition">
+                <option value="bottom-right">右下</option>
+                <option value="bottom-left">左下</option>
+                <option value="top-right">右上</option>
+                <option value="top-left">左上</option>
+                <option value="center">居中</option>
+                <option value="custom">自定义拖动</option>
+                <option value="tile">平铺</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>透明度 <output id="opacityValue">35%</output></span>
+              <input id="opacity" type="range" min="5" max="100" value="35" />
+            </label>
+
+            <label class="field">
+              <span>边距</span>
+              <input id="margin" type="number" min="0" max="500" value="48" />
+            </label>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
