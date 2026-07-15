@@ -1,0 +1,2060 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>二维码批量处理工具（Loki）</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #637083;
+      --paper: #f7f1e4;
+      --panel: #fffaf0;
+      --line: #d8c6a2;
+      --blue: #174e73;
+      --blue-2: #0b314c;
+      --gold: #c99b45;
+      --red: #b45722;
+      --green: #22745d;
+      --shadow: 0 24px 80px rgba(23, 32, 42, .18);
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(201, 155, 69, .26), transparent 34%),
+        radial-gradient(circle at 88% 18%, rgba(23, 78, 115, .18), transparent 30%),
+        linear-gradient(135deg, #efe2c5 0%, #f9f5ea 42%, #e5d4ad 100%);
+      font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .16;
+      background-image:
+        linear-gradient(90deg, rgba(23, 32, 42, .28) 1px, transparent 1px),
+        linear-gradient(rgba(23, 32, 42, .18) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+    }
+
+    .app {
+      width: min(1440px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 36px 0 48px;
+      position: relative;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Noto Sans SC", "PingFang SC", "Segoe UI", sans-serif;
+      font-size: clamp(32px, 3.8vw, 58px);
+      line-height: 1.06;
+      letter-spacing: 0;
+      max-width: 720px;
+      color: var(--blue-2);
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(255, 250, 240, .86), 0 10px 22px rgba(23, 32, 42, .10);
+    }
+
+    .lead {
+      margin: 12px 0 0;
+      color: var(--blue-2);
+      font-size: 16px;
+      line-height: 1.65;
+      max-width: 760px;
+    }
+
+    .status {
+      background: rgba(255, 250, 240, .72);
+      border: 1px solid rgba(120, 86, 35, .24);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .status strong {
+      display: block;
+      font-size: 30px;
+      color: var(--red);
+      margin-bottom: 6px;
+    }
+
+    .status span {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .controls,
+    .stage {
+      background: rgba(255, 250, 240, .82);
+      border: 1px solid rgba(120, 86, 35, .22);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .controls {
+      padding: 18px;
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+
+    .controls::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .controls::-webkit-scrollbar-track {
+      background: rgba(255,255,255,.32);
+      border-radius: 999px;
+    }
+
+    .controls::-webkit-scrollbar-thumb {
+      background: rgba(120, 86, 35, .38);
+      border: 2px solid rgba(255, 250, 240, .82);
+      border-radius: 999px;
+    }
+
+    .controls::-webkit-scrollbar-thumb:hover {
+      background: rgba(120, 86, 35, .58);
+    }
+
+    .stage {
+      min-height: 720px;
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .drop {
+      position: relative;
+      border: 1.5px dashed rgba(23, 78, 115, .44);
+      background: rgba(255,255,255,.52);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 14px;
+      transition: .18s ease;
+    }
+
+    .drop.drag {
+      border-color: var(--red);
+      background: rgba(180, 87, 34, .08);
+      transform: translateY(-1px);
+    }
+
+    .drop label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--blue-2);
+    }
+
+    .drop small {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .field {
+      margin: 18px 0;
+    }
+
+    .field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .field output {
+      font-variant-numeric: tabular-nums;
+      color: var(--red);
+      font-weight: 800;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--red);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255,255,255,.78);
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(23, 78, 115, .12);
+    }
+
+    input[type="color"] {
+      width: 46px;
+      height: 34px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255,255,255,.78);
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      color: var(--blue-2);
+      font-weight: 700;
+    }
+
+    .color-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-inputs input[type="text"] {
+      width: 104px;
+      height: 34px;
+      padding: 0 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+      text-transform: lowercase;
+    }
+
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 14px 0;
+      color: var(--blue-2);
+      font-weight: 700;
+    }
+
+    .check input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 10px 0 18px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255,255,255,.46);
+    }
+
+    .segmented label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border-radius: 5px;
+      color: var(--blue-2);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .segmented input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .segmented label:has(input:checked),
+    .segmented label.is-checked {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(23, 78, 115, .18);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      padding: 13px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 15px;
+      color: #fff;
+      background: var(--blue-2);
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--red), #d18c3e);
+      box-shadow: 0 12px 28px rgba(180, 87, 34, .26);
+    }
+
+    button:disabled {
+      opacity: .44;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(23, 32, 42, .22);
+    }
+
+    .preview-wrap {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(220px, 280px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .preview-pane {
+      min-width: 0;
+    }
+
+    .preview-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: #e8edf3;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .preview-info span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 5px;
+      background: rgba(11, 49, 76, .86);
+      white-space: nowrap;
+    }
+
+    .canvas-shell {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 14px;
+      height: clamp(540px, 70vh, 760px);
+      min-height: 540px;
+      display: block;
+      overflow: auto;
+      cursor: grab;
+      overscroll-behavior: contain;
+    }
+
+    .canvas-shell.dragging {
+      cursor: grabbing;
+    }
+
+    .canvas-shell.panning {
+      cursor: grab;
+    }
+
+    .canvas-shell.panning.dragging {
+      cursor: grabbing;
+    }
+
+    canvas {
+      background: #111;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+      touch-action: none;
+      display: block;
+      margin: 0 auto;
+      flex: 0 0 auto;
+    }
+
+    .list {
+      border-left: 1px solid rgba(120, 86, 35, .22);
+      padding-left: 18px;
+    }
+
+    .list h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+
+    .list-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 10px;
+    }
+
+    .list-head h2 {
+      margin: 0;
+    }
+
+    .mini-btn {
+      padding: 6px 9px;
+      border-radius: 5px;
+      font-size: 12px;
+      line-height: 1;
+      background: rgba(11, 49, 76, .86);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .mini-btn.danger {
+      background: rgba(180, 87, 34, .92);
+    }
+
+    .file-list {
+      display: grid;
+      gap: 8px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .list h2 + h2 {
+      margin-top: 18px;
+    }
+
+    .file-row {
+      display: grid;
+      grid-template-columns: 34px 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(120, 86, 35, .18);
+      border-radius: 7px;
+      background: rgba(255,255,255,.48);
+      cursor: pointer;
+    }
+
+    .qr-row {
+      grid-template-columns: 34px 1fr auto;
+    }
+
+    .file-row b {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 14px;
+    }
+
+    .file-row small {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thumb {
+      width: 34px;
+      height: 44px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #ddd;
+    }
+
+    .empty {
+      border: 1px dashed rgba(23, 78, 115, .32);
+      border-radius: 8px;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 30px;
+      background: rgba(255,255,255,.34);
+    }
+
+    .log {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 7px;
+      background: rgba(23, 78, 115, .08);
+      color: var(--blue-2);
+      font-size: 13px;
+      line-height: 1.55;
+      max-height: 120px;
+      overflow: auto;
+    }
+
+    .tips-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(23, 32, 42, .28);
+      backdrop-filter: blur(6px);
+    }
+
+    .tips-card {
+      width: min(520px, 100%);
+      border: 1px solid rgba(120, 86, 35, .28);
+      border-radius: 8px;
+      background: rgba(255, 250, 240, .96);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .tips-card h2 {
+      margin: 0 0 12px;
+      color: var(--blue-2);
+      font-size: 24px;
+    }
+
+    .tips-card ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--ink);
+      line-height: 1.8;
+    }
+
+    .kbd {
+      display: inline-flex;
+      min-width: 26px;
+      height: 24px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 7px;
+      border: 1px solid rgba(23, 32, 42, .22);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: #fff;
+      color: var(--blue-2);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .tips-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 980px) {
+      header {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .preview-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .list {
+        border-left: 0;
+        border-top: 1px solid rgba(120, 86, 35, .22);
+        padding-left: 0;
+        padding-top: 16px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <section>
+        <h1>二维码批量处理工具（Loki）</h1>
+        <p class="lead">把海报原图和正确二维码拖进来，调整右下角二维码的大小、边距、白底和说明文字，然后批量导出新图片。</p>
+      </section>
+      <aside class="status">
+        <strong id="readyCount">0 张海报</strong>
+        <span id="statusText">等待导入图片。所有处理都在本机浏览器完成，不上传文件。</span>
+      </aside>
+    </header>
+
+    <main>
+      <section class="controls">
+        <div class="drop" id="posterDrop">
+          <label>
+            <span>导入海报 PNG/JPG</span>
+            <span class="pill">批量</span>
+          </label>
+          <small>可一次选择多张；默认使用第一张做实时预览。</small>
+          <input id="posterInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+        </div>
+
+        <div class="drop" id="qrDrop">
+          <label>
+            <span>导入正确二维码</span>
+            <span class="pill">QR</span>
+          </label>
+          <small>可一次添加多张二维码；可对当前二维码手动框选裁切。</small>
+          <input id="qrInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+        </div>
+
+        <div class="actions">
+          <button id="cropQR" type="button">手动裁切当前二维码</button>
+          <button id="resetCropQR" type="button">恢复原始二维码</button>
+        </div>
+
+        <div class="actions" id="cropActions" hidden>
+          <button id="applyCropQR" class="primary" type="button">应用裁切</button>
+          <button id="cancelCropQR" type="button">取消裁切</button>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>二维码宽度</span><output id="qrSizeOut">250 px</output></div>
+          <input id="qrSize" type="range" min="120" max="520" value="250">
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>二维码高度</span><output id="qrHeightOut">250 px</output></div>
+          <input id="qrHeight" type="range" min="120" max="520" value="250">
+        </div>
+
+        <label class="check">
+          <input id="lockAspect" type="checkbox" checked>
+          <span>锁定二维码宽高比</span>
+        </label>
+
+        <div class="field">
+          <div class="field-head"><span>位置模式</span></div>
+          <div class="segmented">
+            <label>
+              <input type="radio" name="positionMode" value="shared" checked>
+              <span>统一坐标</span>
+            </label>
+            <label>
+              <input type="radio" name="positionMode" value="perPoster">
+              <span>单张记忆</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>右侧边距</span><output id="rightOut">82 px</output></div>
+          <input id="rightMargin" type="range" min="0" max="260" value="82">
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>底部边距</span><output id="bottomOut">98 px</output></div>
+          <input id="bottomMargin" type="range" min="0" max="280" value="98">
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>白底留边</span><output id="padOut">24 px</output></div>
+          <input id="padding" type="range" min="0" max="70" value="24">
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span>圆角</span><output id="radiusOut">24 px</output></div>
+          <input id="radius" type="range" min="0" max="44" value="24">
+        </div>
+
+        <label class="check">
+          <input id="showLabel" type="checkbox" checked>
+          <span>显示说明文字</span>
+        </label>
+
+        <div class="field">
+          <div class="field-head"><span>说明文字</span></div>
+          <input id="labelText" type="text" value="扫码了解活动详情">
+          <label class="color-row">
+            <span>文字颜色</span>
+            <span class="color-inputs">
+              <input id="labelColor" type="color" value="#17202a">
+              <input id="labelColorHex" type="text" value="#17202a" spellcheck="false" aria-label="文字颜色色值">
+            </span>
+          </label>
+        </div>
+
+        <label class="check">
+          <input id="coverOld" type="checkbox" checked>
+          <span>先铺白底覆盖旧二维码</span>
+        </label>
+
+        <label class="check">
+          <input id="transparentPanel" type="checkbox">
+          <span>二维码白底和边框透明</span>
+        </label>
+
+        <div class="actions">
+          <button id="downloadOne">下载预览</button>
+          <button id="downloadAll" class="primary">打包下载</button>
+        </div>
+
+        <div class="log" id="log">单张输出会自动追加 -qr-fixed；批量会打包为 ZIP。</div>
+      </section>
+
+      <section class="stage">
+        <div id="empty" class="empty">
+          <div>
+            <b>导入海报和二维码后显示预览</b>
+            <p>建议先用一张海报调好位置，再批量导出全部。</p>
+          </div>
+        </div>
+
+        <div id="preview" class="preview-wrap" hidden>
+          <div class="preview-pane">
+            <div class="preview-info" id="previewInfo"></div>
+            <div class="canvas-shell">
+              <canvas id="canvas"></canvas>
+            </div>
+          </div>
+          <aside class="list">
+            <div class="list-head">
+              <h2>二维码图层</h2>
+              <button id="clearQrs" class="mini-btn danger" type="button">清空</button>
+            </div>
+            <div class="file-list" id="qrList"></div>
+            <div class="list-head">
+              <h2>待处理文件</h2>
+              <button id="clearPosters" class="mini-btn danger" type="button">清空</button>
+            </div>
+            <div class="file-list" id="fileList"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="tips-modal" id="tipsModal" hidden>
+    <div class="tips-card" role="dialog" aria-modal="true" aria-labelledby="tipsTitle">
+      <h2 id="tipsTitle">快捷操作提示</h2>
+      <ul>
+        <li>鼠标滚轮：放大或缩小预览区图片。</li>
+        <li><span class="kbd">空格</span> + 鼠标左键：拖动预览画面位置。</li>
+        <li>拖动二维码：调整二维码位置。</li>
+        <li>拖动右下角绿色手柄：调整二维码大小。</li>
+      </ul>
+      <div class="tips-actions">
+        <button id="tipsClose" type="button">知道了</button>
+        <button id="tipsNever" class="primary" type="button">不再弹出</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      posters: [],
+      qrs: [],
+      selectedQrIndex: 0,
+      previewIndex: 0,
+      positionMode: 'shared',
+      previewZoom: 1,
+      spacePressed: false,
+      cropMode: false,
+      cropDraft: null,
+      drag: null
+    };
+
+    const els = {
+      posterInput: document.getElementById('posterInput'),
+      qrInput: document.getElementById('qrInput'),
+      readyCount: document.getElementById('readyCount'),
+      statusText: document.getElementById('statusText'),
+      empty: document.getElementById('empty'),
+      preview: document.getElementById('preview'),
+      previewInfo: document.getElementById('previewInfo'),
+      canvas: document.getElementById('canvas'),
+      fileList: document.getElementById('fileList'),
+      qrList: document.getElementById('qrList'),
+      clearQrs: document.getElementById('clearQrs'),
+      clearPosters: document.getElementById('clearPosters'),
+      tipsModal: document.getElementById('tipsModal'),
+      tipsClose: document.getElementById('tipsClose'),
+      tipsNever: document.getElementById('tipsNever'),
+      log: document.getElementById('log'),
+      downloadOne: document.getElementById('downloadOne'),
+      downloadAll: document.getElementById('downloadAll'),
+      positionModes: [...document.querySelectorAll('input[name="positionMode"]')],
+      qrSize: document.getElementById('qrSize'),
+      qrHeight: document.getElementById('qrHeight'),
+      lockAspect: document.getElementById('lockAspect'),
+      rightMargin: document.getElementById('rightMargin'),
+      bottomMargin: document.getElementById('bottomMargin'),
+      padding: document.getElementById('padding'),
+      radius: document.getElementById('radius'),
+      showLabel: document.getElementById('showLabel'),
+      labelText: document.getElementById('labelText'),
+      labelColor: document.getElementById('labelColor'),
+      labelColorHex: document.getElementById('labelColorHex'),
+      coverOld: document.getElementById('coverOld'),
+      transparentPanel: document.getElementById('transparentPanel'),
+      cropQR: document.getElementById('cropQR'),
+      resetCropQR: document.getElementById('resetCropQR'),
+      cropActions: document.getElementById('cropActions'),
+      applyCropQR: document.getElementById('applyCropQR'),
+      cancelCropQR: document.getElementById('cancelCropQR')
+    };
+
+    const outs = {
+      qrSize: document.getElementById('qrSizeOut'),
+      qrHeight: document.getElementById('qrHeightOut'),
+      rightMargin: document.getElementById('rightOut'),
+      bottomMargin: document.getElementById('bottomOut'),
+      padding: document.getElementById('padOut'),
+      radius: document.getElementById('radiusOut')
+    };
+
+    function readImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => resolve({ file, img, url });
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error(`无法读取：${file.name}`));
+        };
+        img.src = url;
+      });
+    }
+
+    function safeStorageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    function safeStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        // Ignore storage failures in private or restricted browser modes.
+      }
+    }
+
+    async function loadPosters(files) {
+      cleanupPosters();
+      const images = [];
+      for (const file of [...files]) {
+        if (!file.type.startsWith('image/')) continue;
+        images.push(await readImage(file));
+      }
+      state.posters = images;
+      state.previewIndex = 0;
+      for (const qr of state.qrs) qr.perPosterSettings = {};
+      updateUI();
+      renderPreview();
+    }
+
+    async function loadQRs(files) {
+      const incoming = [...files].filter(file => file.type.startsWith('image/'));
+      if (!incoming.length) return;
+      const firstNewIndex = state.qrs.length;
+      for (const file of incoming) {
+        const item = await readImage(file);
+        item.crop = null;
+        const index = state.qrs.length;
+        item.settings = {
+          ...formValues(),
+          right: Math.max(0, Number(els.rightMargin.value) + index * 28),
+          bottom: Math.max(0, Number(els.bottomMargin.value) + index * 28)
+        };
+        item.perPosterSettings = {};
+        state.qrs.push(item);
+      }
+      state.selectedQrIndex = firstNewIndex;
+      loadSettingsToControls(settingsFor(activeQR()));
+      updateUI();
+      renderPreview();
+    }
+
+    function cleanupPosters() {
+      for (const item of state.posters) URL.revokeObjectURL(item.url);
+      state.posters = [];
+    }
+
+    function cleanupQRs() {
+      for (const item of state.qrs) URL.revokeObjectURL(item.url);
+      state.qrs = [];
+      state.selectedQrIndex = 0;
+    }
+
+    function removePoster(index) {
+      if (!state.posters[index]) return;
+      syncActiveFromControls();
+      URL.revokeObjectURL(state.posters[index].url);
+      state.posters.splice(index, 1);
+      for (const qr of state.qrs) {
+        const next = {};
+        Object.entries(qr.perPosterSettings || {}).forEach(([key, value]) => {
+          const posterIndex = Number(key);
+          if (posterIndex < index) next[posterIndex] = value;
+          if (posterIndex > index) next[posterIndex - 1] = value;
+        });
+        qr.perPosterSettings = next;
+      }
+      state.previewIndex = clamp(state.previewIndex, 0, Math.max(0, state.posters.length - 1));
+      const qr = activeQR();
+      if (qr) loadSettingsToControls(settingsFor(qr));
+      updateUI();
+      renderPreview();
+    }
+
+    function clearPosters() {
+      cleanupPosters();
+      state.previewIndex = 0;
+      for (const qr of state.qrs) qr.perPosterSettings = {};
+      updateUI();
+      renderPreview();
+    }
+
+    function removeQR(index) {
+      if (!state.qrs[index]) return;
+      if (state.cropMode) exitCropMode(false);
+      URL.revokeObjectURL(state.qrs[index].url);
+      state.qrs.splice(index, 1);
+      state.selectedQrIndex = clamp(state.selectedQrIndex, 0, Math.max(0, state.qrs.length - 1));
+      const qr = activeQR();
+      if (qr) loadSettingsToControls(settingsFor(qr));
+      updateUI();
+      renderPreview();
+    }
+
+    function clearQRs() {
+      if (state.cropMode) exitCropMode(false);
+      cleanupQRs();
+      updateUI();
+      renderPreview();
+    }
+
+    function activeQR() {
+      return state.qrs[state.selectedQrIndex] || null;
+    }
+
+    function normalizeHexColor(value) {
+      const cleaned = value.trim().replace(/^#/, '');
+      if (/^[0-9a-fA-F]{3}$/.test(cleaned)) {
+        return `#${cleaned.split('').map(char => char + char).join('').toLowerCase()}`;
+      }
+      if (/^[0-9a-fA-F]{6}$/.test(cleaned)) {
+        return `#${cleaned.toLowerCase()}`;
+      }
+      return null;
+    }
+
+    function setLabelColor(value) {
+      const color = normalizeHexColor(value);
+      if (!color) return false;
+      els.labelColor.value = color;
+      els.labelColorHex.value = color;
+      return true;
+    }
+
+    function normalizePanelOptions(values) {
+      const next = { ...values };
+      if (next.transparentPanel) next.coverOld = false;
+      return next;
+    }
+
+    function formValues() {
+      const labelColor = normalizeHexColor(els.labelColorHex.value) || els.labelColor.value;
+      const qrWidth = Number(els.qrSize.value);
+      const qrHeight = els.lockAspect.checked ? qrWidth : Number(els.qrHeight.value);
+      return normalizePanelOptions({
+        qrSize: qrWidth,
+        qrWidth,
+        qrHeight,
+        lockAspect: els.lockAspect.checked,
+        right: Number(els.rightMargin.value),
+        bottom: Number(els.bottomMargin.value),
+        pad: Number(els.padding.value),
+        radius: Number(els.radius.value),
+        showLabel: els.showLabel.checked,
+        labelText: els.labelText.value.trim(),
+        labelColor,
+        coverOld: els.coverOld.checked,
+        transparentPanel: els.transparentPanel.checked
+      });
+    }
+
+    function cloneSettings(settings) {
+      return normalizePanelOptions(settings);
+    }
+
+    function settingsFor(qr, posterIndex = state.previewIndex) {
+      if (!qr) return formValues();
+      if (state.positionMode === 'perPoster' && qr.perPosterSettings && qr.perPosterSettings[posterIndex]) {
+        return normalizePanelOptions({ ...qr.settings, ...qr.perPosterSettings[posterIndex] });
+      }
+      return normalizePanelOptions(qr.settings);
+    }
+
+    function values(qr = activeQR()) {
+      return qr ? settingsFor(qr) : formValues();
+    }
+
+    function syncActiveFromControls() {
+      const qr = activeQR();
+      if (!qr) return;
+      const next = formValues();
+      if (state.positionMode === 'perPoster') {
+        qr.perPosterSettings[state.previewIndex] = next;
+      } else {
+        qr.settings = next;
+      }
+    }
+
+    function loadSettingsToControls(settings) {
+      const normalized = normalizePanelOptions(settings);
+      const width = qrWidthOf(normalized);
+      const height = qrHeightOf(normalized);
+      els.qrSize.value = width;
+      els.qrHeight.value = height;
+      els.lockAspect.checked = normalized.lockAspect !== false;
+      els.qrHeight.disabled = els.lockAspect.checked;
+      els.rightMargin.value = normalized.right;
+      els.bottomMargin.value = normalized.bottom;
+      els.padding.value = normalized.pad;
+      els.radius.value = normalized.radius;
+      els.showLabel.checked = normalized.showLabel;
+      els.labelText.value = normalized.labelText;
+      setLabelColor(normalized.labelColor);
+      els.coverOld.checked = normalized.coverOld;
+      els.transparentPanel.checked = normalized.transparentPanel;
+      updateOutputs();
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function qrWidthOf(v) {
+      return Number(v.qrWidth ?? v.qrSize);
+    }
+
+    function qrHeightOf(v) {
+      return v.lockAspect === false ? Number(v.qrHeight ?? v.qrSize) : qrWidthOf(v);
+    }
+
+    function panelMetrics(poster, v) {
+      const w = poster.img.naturalWidth;
+      const h = poster.img.naturalHeight;
+      const qrW = qrWidthOf(v);
+      const qrH = qrHeightOf(v);
+      const labelH = v.showLabel && v.labelText ? Math.max(54, Math.round(Math.min(qrW, qrH) * 0.24)) : 0;
+      const panelW = qrW + v.pad * 2;
+      const panelH = qrH + v.pad * 2 + labelH;
+      return {
+        w,
+        h,
+        qrW,
+        qrH,
+        labelH,
+        panelW,
+        panelH,
+        x: w - panelW - v.right,
+        y: h - panelH - v.bottom
+      };
+    }
+
+    function setRangeValue(input, value) {
+      const min = Number(input.min);
+      const max = Math.max(Number(input.max), Math.ceil(value));
+      input.max = String(max);
+      input.value = String(Math.round(clamp(value, min, max)));
+    }
+
+    function syncRangeLimits() {
+      if (!state.posters.length) return;
+      const poster = state.posters[state.previewIndex];
+      const v = values();
+      const m = panelMetrics(poster, v);
+      const maxRight = Math.max(0, m.w - m.panelW);
+      const maxBottom = Math.max(0, m.h - m.panelH);
+      const maxWidth = Math.max(120, Math.min(1200, Math.floor(m.w * 0.8)));
+      const maxHeight = Math.max(120, Math.min(1200, Math.floor(m.h * 0.8)));
+
+      els.qrSize.max = String(Math.max(maxWidth, qrWidthOf(v)));
+      els.qrHeight.max = String(Math.max(maxHeight, qrHeightOf(v)));
+      els.rightMargin.max = String(Math.max(maxRight, v.right));
+      els.bottomMargin.max = String(Math.max(maxBottom, v.bottom));
+    }
+
+    function updateOutputs() {
+      syncRangeLimits();
+      const v = values();
+      outs.qrSize.textContent = `${qrWidthOf(v)} px`;
+      outs.qrHeight.textContent = `${qrHeightOf(v)} px`;
+      outs.rightMargin.textContent = `${v.right} px`;
+      outs.bottomMargin.textContent = `${v.bottom} px`;
+      outs.padding.textContent = `${v.pad} px`;
+      outs.radius.textContent = `${v.radius} px`;
+    }
+
+    function updateUI() {
+      updateOutputs();
+      updatePositionModeButtons();
+      const ready = state.posters.length && state.qrs.length;
+      const hasAssets = state.posters.length || state.qrs.length;
+      els.readyCount.textContent = `${state.posters.length} 张海报`;
+      els.statusText.textContent = state.qrs.length
+        ? `已添加 ${state.qrs.length} 张二维码，当前编辑：${activeQR().file.name}，${state.positionMode === 'perPoster' ? '单张记忆参数' : '统一参数'}`
+        : '还没有导入二维码。';
+      els.empty.hidden = Boolean(hasAssets);
+      els.preview.hidden = !hasAssets;
+      els.downloadOne.disabled = !ready;
+      els.downloadAll.disabled = !ready;
+      renderList();
+      renderQrList();
+    }
+
+    function updatePositionModeButtons() {
+      for (const input of els.positionModes) {
+        input.closest('label').classList.toggle('is-checked', input.checked);
+      }
+    }
+
+    function applyPreviewZoom() {
+      if (!els.canvas.width || !els.canvas.height) return;
+      const shell = els.canvas.parentElement;
+      const availableW = Math.max(120, shell.clientWidth - 28);
+      const availableH = Math.max(120, Math.min(shell.clientHeight - 28, window.innerHeight * 0.7));
+      const fitScale = Math.min(availableW / els.canvas.width, availableH / els.canvas.height, 1);
+      const scale = fitScale * state.previewZoom;
+      els.canvas.style.width = `${Math.max(1, Math.round(els.canvas.width * scale))}px`;
+      els.canvas.style.height = `${Math.max(1, Math.round(els.canvas.height * scale))}px`;
+      updatePreviewInfo();
+    }
+
+    function updatePreviewInfo() {
+      if (!els.previewInfo) return;
+      if (state.cropMode) {
+        const qr = activeQR();
+        if (!qr) {
+          els.previewInfo.innerHTML = '';
+          return;
+        }
+        const crop = state.cropDraft || qr.crop || { x: 0, y: 0, w: qr.img.naturalWidth, h: qr.img.naturalHeight };
+        els.previewInfo.innerHTML = [
+          '二维码裁切模式',
+          `${qr.img.naturalWidth}×${qr.img.naturalHeight}`,
+          `保留 ${Math.round(crop.w)}×${Math.round(crop.h)}`
+        ].map(text => `<span>${text}</span>`).join('');
+        return;
+      }
+      if (!state.posters.length) {
+        if (!state.qrs.length) {
+          els.previewInfo.innerHTML = '';
+          return;
+        }
+        const qr = activeQR();
+        const cropLabel = qr.crop && qr.crop.changed ? `裁切 ${qr.crop.w}×${qr.crop.h}` : '原图边框';
+        els.previewInfo.innerHTML = [
+          `缩放 ${Math.round(state.previewZoom * 100)}%`,
+          `${state.qrs.length} 个二维码`,
+          `${qr.img.naturalWidth}×${qr.img.naturalHeight}`,
+          cropLabel
+        ].map(text => `<span>${text}</span>`).join('');
+        return;
+      }
+      const poster = state.posters[state.previewIndex];
+      const rect = els.canvas.getBoundingClientRect();
+      const displayScale = els.canvas.width ? rect.width / els.canvas.width : 0;
+      const qr = activeQR();
+      const v = qr ? values(qr) : null;
+      const parts = [
+        `缩放 ${Math.round(displayScale * 100)}%`,
+        `${state.previewIndex + 1}/${state.posters.length}`,
+        `${poster.img.naturalWidth}×${poster.img.naturalHeight}`,
+        `${state.qrs.length} 个二维码`,
+        state.positionMode === 'perPoster' ? '单张记忆' : '统一坐标'
+      ];
+      if (v) {
+        parts.push(`QR ${qrWidthOf(v)}×${qrHeightOf(v)}px`);
+        parts.push(`右 ${v.right}px / 底 ${v.bottom}px`);
+      }
+      els.previewInfo.innerHTML = parts.map(text => `<span>${text}</span>`).join('');
+    }
+
+    function setPreviewZoom(nextZoom, anchorEvent = null) {
+      const shell = els.canvas.parentElement;
+      const rect = els.canvas.getBoundingClientRect();
+      const before = anchorEvent && rect.width && rect.height
+        ? {
+            x: (anchorEvent.clientX - rect.left) / rect.width,
+            y: (anchorEvent.clientY - rect.top) / rect.height
+          }
+        : null;
+
+      state.previewZoom = clamp(nextZoom, 0.25, 6);
+      applyPreviewZoom();
+
+      if (before) {
+        const after = els.canvas.getBoundingClientRect();
+        shell.scrollLeft += (after.left + after.width * before.x) - anchorEvent.clientX;
+        shell.scrollTop += (after.top + after.height * before.y) - anchorEvent.clientY;
+      }
+
+      updatePreviewInfo();
+      els.log.textContent = `预览缩放：${Math.round(state.previewZoom * 100)}%。滚轮缩放只影响预览，不影响导出尺寸。`;
+    }
+
+    function cropRect() {
+      const qr = activeQR();
+      if (!qr) return null;
+      return state.cropDraft || qr.crop || { x: 0, y: 0, w: qr.img.naturalWidth, h: qr.img.naturalHeight, changed: false };
+    }
+
+    function drawCropOverlay(ctx, rect) {
+      if (!rect) return;
+      ctx.save();
+      const lineWidth = Math.max(2, Math.round(Math.min(ctx.canvas.width, ctx.canvas.height) / 260));
+      const dash = Math.max(8, lineWidth * 5);
+      const gap = Math.max(5, lineWidth * 3);
+      ctx.setLineDash([dash, gap]);
+      ctx.lineWidth = lineWidth + 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, .95)';
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = 'rgba(34, 116, 93, .98)';
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.restore();
+    }
+
+    function renderCropPreview() {
+      const qr = activeQR();
+      const ctx = els.canvas.getContext('2d');
+      if (!qr) return;
+      els.canvas.width = qr.img.naturalWidth;
+      els.canvas.height = qr.img.naturalHeight;
+      ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(qr.img, 0, 0);
+      drawCropOverlay(ctx, cropRect());
+      applyPreviewZoom();
+    }
+
+    function enterCropMode() {
+      const qr = activeQR();
+      if (!qr) {
+        els.log.textContent = '请先导入并选择一个二维码图层。';
+        return;
+      }
+      state.cropMode = true;
+      state.cropDraft = qr.crop ? { ...qr.crop } : { x: 0, y: 0, w: qr.img.naturalWidth, h: qr.img.naturalHeight, changed: false };
+      els.cropActions.hidden = false;
+      els.log.textContent = '裁切模式：在预览区拖拽框选要保留的二维码画面。';
+      renderCropPreview();
+    }
+
+    function exitCropMode(render = true) {
+      state.cropMode = false;
+      state.cropDraft = null;
+      els.cropActions.hidden = true;
+      if (render) renderPreview();
+    }
+
+    function applyCrop() {
+      const qr = activeQR();
+      if (!qr || !state.cropDraft) return;
+      const rect = state.cropDraft;
+      qr.crop = {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        w: Math.round(rect.w),
+        h: Math.round(rect.h),
+        changed: rect.w < qr.img.naturalWidth || rect.h < qr.img.naturalHeight
+      };
+      els.log.textContent = `已应用二维码裁切：${qr.crop.w}×${qr.crop.h}。`;
+      renderQrList();
+      exitCropMode(true);
+    }
+
+    function resetCrop() {
+      const qr = activeQR();
+      if (!qr) return;
+      qr.crop = null;
+      if (state.cropMode) {
+        state.cropDraft = { x: 0, y: 0, w: qr.img.naturalWidth, h: qr.img.naturalHeight, changed: false };
+        renderCropPreview();
+      } else {
+        renderQrList();
+        renderPreview();
+      }
+      els.log.textContent = '已恢复当前二维码原始画面。';
+    }
+
+    function renderQrList() {
+      els.qrList.innerHTML = '';
+      if (!state.qrs.length) {
+        els.qrList.innerHTML = '<div class="log">还没有二维码图层。</div>';
+        return;
+      }
+
+      state.qrs.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'file-row qr-row';
+        row.style.color = 'var(--ink)';
+        row.style.background = index === state.selectedQrIndex ? 'rgba(34,116,93,.18)' : 'rgba(255,255,255,.48)';
+        row.onclick = () => {
+          syncActiveFromControls();
+          state.selectedQrIndex = index;
+          loadSettingsToControls(settingsFor(item));
+          renderQrList();
+          renderPreview();
+        };
+        row.innerHTML = `
+          <img class="thumb" src="${item.url}" alt="">
+          <b title="${item.file.name}">${index + 1}. ${item.file.name}${item.crop && item.crop.changed ? ' · 手动裁切' : ''}</b>
+          <button class="mini-btn danger" type="button" data-remove-qr="${index}">删除</button>
+        `;
+        row.querySelector('[data-remove-qr]').addEventListener('click', event => {
+          event.stopPropagation();
+          removeQR(index);
+        });
+        els.qrList.appendChild(row);
+      });
+    }
+
+    function renderList() {
+      els.fileList.innerHTML = '';
+      state.posters.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.style.color = 'var(--ink)';
+        row.style.background = index === state.previewIndex ? 'rgba(201,155,69,.22)' : 'rgba(255,255,255,.48)';
+        row.onclick = () => {
+          syncActiveFromControls();
+          state.previewIndex = index;
+          const qr = activeQR();
+          if (qr) loadSettingsToControls(settingsFor(qr));
+          renderList();
+          renderPreview();
+        };
+        row.innerHTML = `
+          <img class="thumb" src="${item.url}" alt="">
+          <b title="${item.file.name}">${item.file.name}</b>
+          <small>${item.img.naturalWidth}×${item.img.naturalHeight}</small>
+          <button class="mini-btn danger" type="button" data-remove-poster="${index}">删除</button>
+        `;
+        row.querySelector('[data-remove-poster]').addEventListener('click', event => {
+          event.stopPropagation();
+          removePoster(index);
+        });
+        els.fileList.appendChild(row);
+      });
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function drawDragGuides(ctx, m) {
+      const handle = Math.max(24, Math.round(Math.min(m.w, m.h) * 0.018));
+
+      ctx.save();
+      ctx.setLineDash([Math.max(10, handle * 0.55), Math.max(7, handle * 0.35)]);
+      ctx.lineWidth = Math.max(3, Math.round(m.w / 700));
+      ctx.strokeStyle = 'rgba(34, 116, 93, 0.95)';
+      roundRect(ctx, m.x, m.y, m.panelW, m.panelH, 8);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(34, 116, 93, 0.95)';
+      ctx.strokeStyle = '#fffaf0';
+      ctx.lineWidth = Math.max(3, Math.round(handle * 0.16));
+      ctx.beginPath();
+      ctx.rect(m.x + m.panelW - handle, m.y + m.panelH - handle, handle, handle);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#fffaf0';
+      ctx.lineWidth = Math.max(2, Math.round(handle * 0.12));
+      ctx.beginPath();
+      ctx.moveTo(m.x + m.panelW - handle * 0.72, m.y + m.panelH - handle * 0.28);
+      ctx.lineTo(m.x + m.panelW - handle * 0.28, m.y + m.panelH - handle * 0.72);
+      ctx.moveTo(m.x + m.panelW - handle * 0.52, m.y + m.panelH - handle * 0.18);
+      ctx.lineTo(m.x + m.panelW - handle * 0.18, m.y + m.panelH - handle * 0.52);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawQrImage(ctx, qr, v, x, y) {
+      const targetX = x + v.pad;
+      const targetY = y + v.pad;
+      const targetW = qrWidthOf(v);
+      const targetH = qrHeightOf(v);
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      if (v.transparentPanel && v.radius > 0) {
+        roundRect(ctx, targetX, targetY, targetW, targetH, v.radius);
+        ctx.clip();
+      }
+      if (qr.crop) {
+        ctx.drawImage(qr.img, qr.crop.x, qr.crop.y, qr.crop.w, qr.crop.h, targetX, targetY, targetW, targetH);
+      } else {
+        ctx.drawImage(qr.img, targetX, targetY, targetW, targetH);
+      }
+      ctx.restore();
+    }
+
+    function drawQrPanel(ctx, poster, qr, v, options = {}) {
+      const { w, h, labelH, panelW, panelH, x, y } = panelMetrics(poster, v);
+
+      if (v.coverOld && !v.transparentPanel) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 250, 240, 0.98)';
+        ctx.strokeStyle = 'rgba(202, 154, 66, 0.92)';
+        ctx.lineWidth = Math.max(3, Math.round(w / 520));
+        roundRect(ctx, x, y, panelW, panelH, v.radius);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawQrImage(ctx, qr, v, x, y);
+
+      if (v.showLabel && v.labelText) {
+        ctx.save();
+        ctx.fillStyle = v.labelColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `700 ${Math.max(22, Math.round(Math.min(qrWidthOf(v), qrHeightOf(v)) * 0.13))}px "Microsoft YaHei", sans-serif`;
+        ctx.fillText(v.labelText, x + panelW / 2, y + v.pad + qrHeightOf(v) + labelH / 2, panelW - 18);
+        ctx.restore();
+      }
+
+      if (options.guides) {
+        drawDragGuides(ctx, { w, h, panelW, panelH, x, y });
+      }
+    }
+
+    function drawComposite(ctx, poster, qrs, options = {}) {
+      const w = poster.img.naturalWidth;
+      const h = poster.img.naturalHeight;
+      const posterIndex = options.posterIndex ?? state.previewIndex;
+
+      ctx.canvas.width = w;
+      ctx.canvas.height = h;
+      ctx.clearRect(0, 0, w, h);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(poster.img, 0, 0, w, h);
+
+      qrs.forEach((qr, index) => {
+        drawQrPanel(ctx, poster, qr, settingsFor(qr, posterIndex), {
+          guides: options.guides && index === state.selectedQrIndex
+        });
+      });
+    }
+
+    function renderPreview() {
+      if (state.cropMode) {
+        renderCropPreview();
+        return;
+      }
+      const ctx = els.canvas.getContext('2d');
+      if (!state.posters.length) {
+        if (!state.qrs.length) {
+          ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+          els.canvas.width = 0;
+          els.canvas.height = 0;
+          els.canvas.style.width = '';
+          els.canvas.style.height = '';
+          updatePreviewInfo();
+          return;
+        }
+        const qr = activeQR();
+        const crop = qr.crop || { x: 0, y: 0, w: qr.img.naturalWidth, h: qr.img.naturalHeight };
+        const side = Math.max(crop.w, crop.h);
+        const margin = Math.max(36, Math.round(side * 0.12));
+        els.canvas.width = side + margin * 2;
+        els.canvas.height = side + margin * 2;
+        ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+        ctx.fillStyle = '#f7f1e4';
+        ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(qr.img, crop.x, crop.y, crop.w, crop.h, margin + (side - crop.w) / 2, margin + (side - crop.h) / 2, crop.w, crop.h);
+        applyPreviewZoom();
+        return;
+      }
+      const poster = state.posters[state.previewIndex];
+      if (!state.qrs.length) {
+        ctx.canvas.width = poster.img.naturalWidth;
+        ctx.canvas.height = poster.img.naturalHeight;
+        ctx.drawImage(poster.img, 0, 0);
+        applyPreviewZoom();
+        return;
+      }
+      drawComposite(ctx, poster, state.qrs, { guides: true });
+      applyPreviewZoom();
+    }
+
+    function canvasPoint(event) {
+      const rect = els.canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (els.canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (els.canvas.height / rect.height)
+      };
+    }
+
+    function currentPanel(index = state.selectedQrIndex) {
+      if (!state.posters.length || !state.qrs.length) return null;
+      const qr = state.qrs[index];
+      if (!qr) return null;
+      return panelMetrics(state.posters[state.previewIndex], settingsFor(qr));
+    }
+
+    function hitTest(point) {
+      for (let index = state.qrs.length - 1; index >= 0; index--) {
+        const m = currentPanel(index);
+        if (!m) continue;
+        const handle = Math.max(24, Math.round(Math.min(m.w, m.h) * 0.018));
+        const inPanel = point.x >= m.x && point.x <= m.x + m.panelW && point.y >= m.y && point.y <= m.y + m.panelH;
+        const inHandle = point.x >= m.x + m.panelW - handle && point.x <= m.x + m.panelW
+          && point.y >= m.y + m.panelH - handle && point.y <= m.y + m.panelH;
+
+        if (inHandle) return { mode: 'resize', index };
+        if (inPanel) return { mode: 'move', index };
+      }
+      return null;
+    }
+
+    function applyPanelPosition(x, y) {
+      const poster = state.posters[state.previewIndex];
+      const v = values();
+      const m = panelMetrics(poster, v);
+      const nextX = clamp(x, 0, Math.max(0, m.w - m.panelW));
+      const nextY = clamp(y, 0, Math.max(0, m.h - m.panelH));
+
+      setRangeValue(els.rightMargin, m.w - m.panelW - nextX);
+      setRangeValue(els.bottomMargin, m.h - m.panelH - nextY);
+      syncActiveFromControls();
+      updateOutputs();
+      renderPreview();
+    }
+
+    function applyPanelSize(point) {
+      const poster = state.posters[state.previewIndex];
+      const start = state.drag.startMetrics;
+      const v = values();
+      const availableByWidth = point.x - start.x - v.pad * 2;
+      const availableByHeight = point.y - start.y - v.pad * 2;
+      if (v.lockAspect === false) {
+        const nextWidth = clamp(Math.round(availableByWidth), Number(els.qrSize.min), Number(els.qrSize.max));
+        const nextHeight = clamp(Math.round(availableByHeight), Number(els.qrHeight.min), Number(els.qrHeight.max));
+        setRangeValue(els.qrSize, nextWidth);
+        setRangeValue(els.qrHeight, nextHeight);
+      } else {
+        const nextSize = clamp(
+          Math.round(Math.min(availableByWidth, availableByHeight)),
+          Number(els.qrSize.min),
+          Number(els.qrSize.max)
+        );
+        setRangeValue(els.qrSize, nextSize);
+        setRangeValue(els.qrHeight, nextSize);
+      }
+      const next = panelMetrics(poster, values());
+      setRangeValue(els.rightMargin, next.w - next.panelW - start.x);
+      setRangeValue(els.bottomMargin, next.h - next.panelH - start.y);
+      syncActiveFromControls();
+      updateOutputs();
+      renderPreview();
+    }
+
+    function downloadCanvas(canvas, filename) {
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 800);
+      }, 'image/png');
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    }
+
+    function downloadBlob(blob, filename) {
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+    }
+
+    function dateToDos(date = new Date()) {
+      const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+      const day = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+      return { time, day };
+    }
+
+    function makeCrcTable() {
+      const table = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let k = 0; k < 8; k++) {
+          c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        }
+        table[i] = c >>> 0;
+      }
+      return table;
+    }
+
+    const crcTable = makeCrcTable();
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (let i = 0; i < bytes.length; i++) {
+        crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function writeU16(parts, value) {
+      parts.push(value & 0xff, (value >>> 8) & 0xff);
+    }
+
+    function writeU32(parts, value) {
+      parts.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+    }
+
+    function createZip(files) {
+      const encoder = new TextEncoder();
+      const fileParts = [];
+      const centralParts = [];
+      let offset = 0;
+      const { time, day } = dateToDos();
+
+      for (const file of files) {
+        const nameBytes = encoder.encode(file.name);
+        const bytes = file.bytes;
+        const crc = crc32(bytes);
+        const local = [];
+
+        writeU32(local, 0x04034b50);
+        writeU16(local, 20);
+        writeU16(local, 0x0800);
+        writeU16(local, 0);
+        writeU16(local, time);
+        writeU16(local, day);
+        writeU32(local, crc);
+        writeU32(local, bytes.length);
+        writeU32(local, bytes.length);
+        writeU16(local, nameBytes.length);
+        writeU16(local, 0);
+        fileParts.push(new Uint8Array(local), nameBytes, bytes);
+
+        const central = [];
+        writeU32(central, 0x02014b50);
+        writeU16(central, 20);
+        writeU16(central, 20);
+        writeU16(central, 0x0800);
+        writeU16(central, 0);
+        writeU16(central, time);
+        writeU16(central, day);
+        writeU32(central, crc);
+        writeU32(central, bytes.length);
+        writeU32(central, bytes.length);
+        writeU16(central, nameBytes.length);
+        writeU16(central, 0);
+        writeU16(central, 0);
+        writeU16(central, 0);
+        writeU16(central, 0);
+        writeU32(central, 0);
+        writeU32(central, offset);
+        centralParts.push(new Uint8Array(central), nameBytes);
+
+        offset += local.length + nameBytes.length + bytes.length;
+      }
+
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+      const end = [];
+      writeU32(end, 0x06054b50);
+      writeU16(end, 0);
+      writeU16(end, 0);
+      writeU16(end, files.length);
+      writeU16(end, files.length);
+      writeU32(end, centralSize);
+      writeU32(end, offset);
+      writeU16(end, 0);
+
+      return new Blob([...fileParts, ...centralParts, new Uint8Array(end)], { type: 'application/zip' });
+    }
+
+    function fixedName(name) {
+      return name.replace(/\.(png|jpe?g|webp)$/i, '') + '-qr-fixed.png';
+    }
+
+    function downloadOne() {
+      if (!state.posters.length || !state.qrs.length) return;
+      syncActiveFromControls();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const poster = state.posters[state.previewIndex];
+      drawComposite(ctx, poster, state.qrs, { posterIndex: state.previewIndex });
+      downloadCanvas(canvas, fixedName(poster.file.name));
+    }
+
+    async function downloadAll() {
+      if (!state.posters.length || !state.qrs.length) return;
+      syncActiveFromControls();
+      els.downloadAll.disabled = true;
+      try {
+        els.log.textContent = `开始打包 ${state.posters.length} 张...`;
+        const files = [];
+        for (let i = 0; i < state.posters.length; i++) {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          drawComposite(ctx, state.posters[i], state.qrs, { posterIndex: i });
+          const blob = await canvasToBlob(canvas);
+          if (!blob) throw new Error(`无法生成：${state.posters[i].file.name}`);
+          files.push({
+            name: fixedName(state.posters[i].file.name),
+            bytes: new Uint8Array(await blob.arrayBuffer())
+          });
+          els.log.textContent = `已生成 ${i + 1}/${state.posters.length}：${fixedName(state.posters[i].file.name)}`;
+        }
+        downloadBlob(createZip(files), `qr-fixed-${new Date().toISOString().slice(0, 10)}.zip`);
+        els.log.textContent = `已打包下载 ${files.length} 张图片。`;
+      } catch (error) {
+        els.log.textContent = `打包失败：${error.message}`;
+      } finally {
+        els.downloadAll.disabled = false;
+      }
+    }
+
+    function wireDrop(zone, input, handler) {
+      zone.addEventListener('dragover', event => {
+        event.preventDefault();
+        zone.classList.add('drag');
+      });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+      zone.addEventListener('drop', event => {
+        event.preventDefault();
+        zone.classList.remove('drag');
+        handler(event.dataTransfer.files);
+      });
+      input.addEventListener('change', event => handler(event.target.files));
+    }
+
+    wireDrop(document.getElementById('posterDrop'), els.posterInput, files => loadPosters(files));
+    wireDrop(document.getElementById('qrDrop'), els.qrInput, files => loadQRs(files));
+
+    els.positionModes.forEach(input => {
+      input.addEventListener('change', () => {
+        if (!input.checked) return;
+        syncActiveFromControls();
+        state.positionMode = input.value;
+        const qr = activeQR();
+        if (qr) loadSettingsToControls(settingsFor(qr));
+        updateUI();
+        renderPreview();
+      });
+    });
+
+    for (const id of ['qrSize', 'qrHeight', 'rightMargin', 'bottomMargin', 'padding', 'radius']) {
+      els[id].addEventListener('input', () => {
+        if (id === 'qrSize' && els.lockAspect.checked) {
+          setRangeValue(els.qrHeight, Number(els.qrSize.value));
+        }
+        syncActiveFromControls();
+        updateOutputs();
+        renderPreview();
+        renderQrList();
+      });
+    }
+
+    els.lockAspect.addEventListener('change', () => {
+      if (els.lockAspect.checked) {
+        setRangeValue(els.qrHeight, Number(els.qrSize.value));
+      }
+      els.qrHeight.disabled = els.lockAspect.checked;
+      syncActiveFromControls();
+      updateOutputs();
+      renderPreview();
+      renderQrList();
+    });
+
+    els.canvas.parentElement.addEventListener('wheel', event => {
+      if (!state.posters.length && !state.qrs.length) return;
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+      setPreviewZoom(state.previewZoom * factor, event);
+    }, { passive: false });
+
+    const canvasShell = els.canvas.parentElement;
+
+    canvasShell.addEventListener('pointerdown', event => {
+      if (state.cropMode) {
+        if (event.target !== els.canvas) return;
+        const point = canvasPoint(event);
+        state.drag = {
+          mode: 'crop',
+          pointerId: event.pointerId,
+          startPoint: point
+        };
+        state.cropDraft = { x: point.x, y: point.y, w: 1, h: 1, changed: true };
+        canvasShell.setPointerCapture(event.pointerId);
+        canvasShell.classList.add('dragging');
+        event.preventDefault();
+        return;
+      }
+
+      if (state.spacePressed) {
+        state.drag = {
+          mode: 'pan',
+          pointerId: event.pointerId,
+          startPoint: { x: event.clientX, y: event.clientY },
+          startScroll: {
+            left: canvasShell.scrollLeft,
+            top: canvasShell.scrollTop
+          }
+        };
+        canvasShell.setPointerCapture(event.pointerId);
+        canvasShell.classList.add('dragging');
+        event.preventDefault();
+        return;
+      }
+
+      if (event.target !== els.canvas) return;
+      const hit = hitTest(canvasPoint(event));
+      if (!hit) return;
+      if (state.selectedQrIndex !== hit.index) {
+        syncActiveFromControls();
+        state.selectedQrIndex = hit.index;
+        loadSettingsToControls(settingsFor(activeQR()));
+        renderQrList();
+      }
+      const point = canvasPoint(event);
+      const startMetrics = currentPanel();
+      state.drag = {
+        mode: hit.mode,
+        pointerId: event.pointerId,
+        startPoint: point,
+        startMetrics
+      };
+      canvasShell.setPointerCapture(event.pointerId);
+      canvasShell.classList.add('dragging');
+      event.preventDefault();
+    });
+
+    canvasShell.addEventListener('pointermove', event => {
+      if (state.drag && state.drag.mode === 'crop') {
+        const qr = activeQR();
+        if (!qr) return;
+        const point = canvasPoint(event);
+        const x1 = clamp(Math.min(state.drag.startPoint.x, point.x), 0, qr.img.naturalWidth - 1);
+        const y1 = clamp(Math.min(state.drag.startPoint.y, point.y), 0, qr.img.naturalHeight - 1);
+        const x2 = clamp(Math.max(state.drag.startPoint.x, point.x), x1 + 1, qr.img.naturalWidth);
+        const y2 = clamp(Math.max(state.drag.startPoint.y, point.y), y1 + 1, qr.img.naturalHeight);
+        state.cropDraft = { x: x1, y: y1, w: x2 - x1, h: y2 - y1, changed: true };
+        renderCropPreview();
+        event.preventDefault();
+        return;
+      }
+
+      if (state.drag && state.drag.mode === 'pan') {
+        canvasShell.scrollLeft = state.drag.startScroll.left - (event.clientX - state.drag.startPoint.x);
+        canvasShell.scrollTop = state.drag.startScroll.top - (event.clientY - state.drag.startPoint.y);
+        event.preventDefault();
+        return;
+      }
+
+      const point = canvasPoint(event);
+      if (!state.drag) {
+        if (event.target !== els.canvas) return;
+        const hit = state.spacePressed ? null : hitTest(point);
+        els.canvas.style.cursor = state.spacePressed ? 'grab' : hit && hit.mode === 'resize' ? 'nwse-resize' : hit && hit.mode === 'move' ? 'grab' : 'default';
+        return;
+      }
+
+      if (state.drag.mode === 'move') {
+        const dx = point.x - state.drag.startPoint.x;
+        const dy = point.y - state.drag.startPoint.y;
+        applyPanelPosition(state.drag.startMetrics.x + dx, state.drag.startMetrics.y + dy);
+      } else {
+        applyPanelSize(point);
+      }
+
+      event.preventDefault();
+    });
+
+    function endDrag(event) {
+      if (!state.drag) return;
+      const mode = state.drag.mode;
+      if (canvasShell.hasPointerCapture(state.drag.pointerId)) {
+        canvasShell.releasePointerCapture(state.drag.pointerId);
+      }
+      state.drag = null;
+      canvasShell.classList.remove('dragging');
+      if (mode === 'crop') renderCropPreview();
+      else if (mode !== 'pan') renderPreview();
+      event.preventDefault();
+    }
+
+    canvasShell.addEventListener('pointerup', endDrag);
+    canvasShell.addEventListener('pointercancel', endDrag);
+    canvasShell.addEventListener('pointerleave', event => {
+      if (!state.drag) els.canvas.style.cursor = 'default';
+    });
+
+    window.addEventListener('keydown', event => {
+      if (event.code !== 'Space' || event.repeat) return;
+      const active = document.activeElement;
+      const tag = active && active.tagName;
+      const type = active && active.type;
+      if (tag === 'TEXTAREA' || (tag === 'INPUT' && ['text', 'search', 'url', 'email', 'password', 'number'].includes(type))) return;
+      state.spacePressed = true;
+      canvasShell.classList.add('panning');
+      els.canvas.style.cursor = 'grab';
+      event.preventDefault();
+    });
+
+    window.addEventListener('keyup', event => {
+      if (event.code !== 'Space') return;
+      state.spacePressed = false;
+      canvasShell.classList.remove('panning');
+      if (!state.drag) els.canvas.style.cursor = 'default';
+      event.preventDefault();
+    });
+
+    for (const el of [els.showLabel, els.coverOld, els.transparentPanel, els.labelText]) {
+      const eventName = el.type === 'checkbox' ? 'change' : 'input';
+      el.addEventListener(eventName, () => {
+        if (el === els.coverOld && els.coverOld.checked) {
+          els.transparentPanel.checked = false;
+        }
+        if (el === els.transparentPanel && els.transparentPanel.checked) {
+          els.coverOld.checked = false;
+        }
+        syncActiveFromControls();
+        renderPreview();
+        renderQrList();
+      });
+    }
+
+    els.labelColor.addEventListener('input', () => {
+      els.labelColorHex.value = els.labelColor.value;
+      syncActiveFromControls();
+      renderPreview();
+      renderQrList();
+    });
+
+    els.labelColorHex.addEventListener('input', () => {
+      if (!setLabelColor(els.labelColorHex.value)) return;
+      syncActiveFromControls();
+      renderPreview();
+      renderQrList();
+    });
+    window.addEventListener('resize', applyPreviewZoom);
+    els.clearQrs.addEventListener('click', clearQRs);
+    els.clearPosters.addEventListener('click', clearPosters);
+    els.cropQR.addEventListener('click', enterCropMode);
+    els.resetCropQR.addEventListener('click', resetCrop);
+    els.applyCropQR.addEventListener('click', applyCrop);
+    els.cancelCropQR.addEventListener('click', () => exitCropMode(true));
+    function closeTips(remember = false) {
+      els.tipsModal.hidden = true;
+      if (remember) safeStorageSet('qrBatchTipsHidden', '1');
+    }
+
+    els.tipsClose.addEventListener('click', () => closeTips(false));
+    els.tipsNever.addEventListener('click', () => closeTips(true));
+    els.tipsModal.addEventListener('click', event => {
+      if (event.target === els.tipsModal) closeTips(false);
+    });
+
+    if (safeStorageGet('qrBatchTipsHidden') !== '1') {
+      els.tipsModal.hidden = false;
+    }
+
+    els.downloadOne.addEventListener('click', downloadOne);
+    els.downloadAll.addEventListener('click', downloadAll);
+
+    updateUI();
+  </script>
+</body>
+</html>
